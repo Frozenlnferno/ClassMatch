@@ -1,0 +1,118 @@
+name: Test, Build, and Publish
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-test:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint source
+        run: npm run lint
+      - name: Build application
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'http://127.0.0.1:54321' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'ci-placeholder' }}
+          VITE_FRONTEND_ORIGIN: ${{ vars.VITE_FRONTEND_ORIGIN || 'http://localhost:3000' }}
+
+  backend-test:
+    name: Flask tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+  publish:
+    name: Publish production images
+    if: >-
+      github.event_name != 'pull_request' &&
+      vars.DOCKERHUB_USERNAME != '' &&
+      vars.VITE_SUPABASE_URL != '' &&
+      vars.VITE_SUPABASE_PUBLISHABLE_KEY != ''
+    runs-on: ubuntu-latest
+    needs:
+      - frontend-test
+      - backend-test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Validate publishing configuration
+        run: |
+          test -n "${{ vars.DOCKERHUB_USERNAME }}" || {
+            echo "Set the DOCKERHUB_USERNAME repository variable."
+            exit 1
+          }
+          test -n "${{ vars.VITE_SUPABASE_URL }}" || {
+            echo "Set the VITE_SUPABASE_URL repository variable."
+            exit 1
+          }
+          test -n "${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}" || {
+            echo "Set the VITE_SUPABASE_PUBLISHABLE_KEY repository variable."
+            exit 1
+          }
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Build and publish backend image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          target: prod
+          push: true
+          tags: |
+            ${{ vars.DOCKERHUB_USERNAME }}/classmatch-backend:latest
+            ${{ vars.DOCKERHUB_USERNAME }}/classmatch-backend:${{ github.sha }}
+      - name: Build and publish frontend image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          target: prod
+          push: true
+          build-args: |
+            VITE_SUPABASE_URL=${{ vars.VITE_SUPABASE_URL }}
+            VITE_SUPABASE_PUBLISHABLE_KEY=${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+            VITE_FRONTEND_ORIGIN=${{ vars.VITE_FRONTEND_ORIGIN }}
+          tags: |
+            ${{ vars.DOCKERHUB_USERNAME }}/classmatch-frontend:latest
+            ${{ vars.DOCKERHUB_USERNAME }}/classmatch-frontend:${{ github.sha }}

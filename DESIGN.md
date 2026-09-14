@@ -48,8 +48,8 @@ In production, the React application and API share one public origin. Nginx serv
 | Object storage | Supabase Storage | Public profile/group images and temporary private ICS uploads |
 | Course catalog | UIUC Course Explorer XML API | Resolves subject, course number, and CRN into authoritative section metadata |
 | Migration API | Java 21, Spring Boot 4 | Partial replacement backend; currently only part of the users domain |
-| CI/CD | GitHub Actions, Docker Hub | Tests and builds the separate frontend/backend repositories and publishes images |
-| Home-server updater | Watchtower, per `DEPLOYMENT.md` | Pulls changed `latest` images; this service is documented but not declared in the checked-in production Compose file |
+| CI/CD | GitHub Actions, Docker Hub | Tests the monorepo and publishes commit-SHA-tagged frontend/backend images |
+| Production deployment | Docker Compose | Pulls one immutable release version and starts services in health-checked dependency order |
 
 ## 4. Frontend Routes and General User Flow
 
@@ -293,7 +293,7 @@ It parses the XML into class title, subject/number, section, CRN, course type, i
 |---|---:|---|
 | `frontend` | 3000 | Production-built frontend served by Nginx |
 | `backend` | 5000 | Flask development server with source bind-mounted |
-| `backend-java` | 8080 | Spring migration service; its `SERVER_PORT` must match the Compose mapping |
+| `backend-java` | 8080 | Optional `migration` profile; its `SERVER_PORT` must match the Compose mapping |
 | `redis` | 6379 | Local Redis |
 | `worker` | None | Python worker using the backend source mount |
 
@@ -301,7 +301,7 @@ The PostgreSQL database and Supabase services are external to this Compose proje
 
 ### Production Compose
 
-- Pulls `classmatch-frontend:latest` and `classmatch-backend:latest` from Docker Hub.
+- Pulls `classmatch-frontend:<release-sha>` and `classmatch-backend:<release-sha>` from Docker Hub.
 - Runs Nginx publicly on port 3000.
 - Exposes Flask only to the internal Compose network on port 5000.
 - Runs a separate worker container from the same backend image.
@@ -310,10 +310,11 @@ The PostgreSQL database and Supabase services are external to this Compose proje
 
 ### CI/CD
 
-The frontend and Python backend currently remain separate Git repositories with separate workflows.
+One root GitHub Actions workflow handles the monorepo.
 
-- Frontend CI installs dependencies, lints, builds, then publishes `latest` and commit-SHA images.
-- Backend CI installs dependencies, runs the unittest suite, then publishes `latest` and commit-SHA images.
+- Pull requests and pushes to `main` run frontend lint/build checks and Flask tests.
+- After all checks pass on `main`, CI publishes both production images with `latest` and commit-SHA tags.
+- Production Compose deploys the same commit-SHA tag for the frontend, Flask API, and worker as one release.
 - Docker Hub credentials are held in GitHub secrets; public build configuration is held in repository variables.
 
 ## 10. Configuration Boundaries
@@ -346,11 +347,12 @@ Key Spring variables:
 ## 11. Current Boundaries and Known Transition Points
 
 - Flask owns all production `/api/*` traffic.
+- The non-compiling Spring migration is isolated behind the development Compose `migration` profile and is not part of required CI until its user-update implementation is completed.
 - The Spring implementation is not yet API-compatible for the entire users domain and should not receive production traffic until its request/response contract matches the frontend.
 - Schedules and their worker should remain together during any incremental migration.
 - Nginx is already prepared for path-based migration by enabling a more-specific `/api/users` proxy before the general `/api/` rule.
 - Redis is used only for schedule jobs. It can later be retained, replaced by a PostgreSQL job table, or replaced by a maintained job framework without changing the frontend's `202 + job_id + polling` contract.
-- `DEPLOYMENT.md` assumes an external Watchtower installation; the checked-in production Compose file alone does not create it.
+- A deployment webhook receiver is not yet implemented; `DEPLOYMENT.md` documents the validation and serialization requirements for adding one.
 
 ## 12. Source Map
 

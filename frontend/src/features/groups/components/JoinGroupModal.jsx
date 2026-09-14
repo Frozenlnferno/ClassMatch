@@ -17,7 +17,7 @@ export default function JoinGroupModal({ isOpen, onClose, onSubmit, isSubmitting
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const normalizedJoinCode = joinCode.trim().toUpperCase();
+    const normalizedJoinCode = joinCode.trim();
     if (!normalizedJoinCode) {
       setError("Invite code is required.");
       return;
@@ -36,7 +36,7 @@ export default function JoinGroupModal({ isOpen, onClose, onSubmit, isSubmitting
       isOpen={isOpen}
       onClose={onClose}
       title="Join group"
-      description="Paste the invite code a classmate shared with you and we'll take you straight to the group."
+      description="Paste the invite code or invite token a classmate shared with you and we'll take you straight to the group."
       actions={(
         <>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -53,11 +53,11 @@ export default function JoinGroupModal({ isOpen, onClose, onSubmit, isSubmitting
           </Banner>
         ) : null}
 
-        <Field label="Invite code" hint="Letters only">
+        <Field label="Invite code or token" hint="Paste exactly as shared">
           <Input
             value={joinCode}
             onChange={(event) => setJoinCode(event.target.value)}
-            placeholder="QWERTYUIOP"
+            placeholder="Paste your invite here"
             autoCapitalize="characters"
             autoFocus
             required

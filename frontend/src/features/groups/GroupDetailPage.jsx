@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import useSession from "../../utils/useSession.js";
 import {
   changeMemberRole,
+  createGroupInvite,
   getGroupDetails,
   getGroupMembers,
   getMatchingClassmates,
@@ -10,6 +11,7 @@ import {
   kickMember,
   leaveGroup,
   removeGroupIcon,
+  revokeGroupInvites,
   updateGroupInfo,
   uploadGroupIcon,
 } from "./groupService.js";
@@ -69,6 +71,7 @@ export default function GroupDetailPage() {
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true);
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
   const [isSavingGroup, setIsSavingGroup] = useState(false);
+  const [isManagingInvite, setIsManagingInvite] = useState(false);
   const [busyMemberId, setBusyMemberId] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -204,12 +207,16 @@ export default function GroupDetailPage() {
       setSelectedKey(desiredKey);
       return desiredKey;
     } catch (loadError) {
+      if (loadError?.status === 404) {
+        navigate("/mygroups", { replace: true });
+        return "";
+      }
       setError(loadError instanceof Error ? loadError.message : "Unable to load group");
       return "";
     } finally {
       setIsLoadingWorkspace(false);
     }
-  }, [groupId]);
+  }, [groupId, navigate]);
 
   useEffect(() => {
     refreshWorkspace();
@@ -220,13 +227,30 @@ export default function GroupDetailPage() {
   }, [loadScheduleOverlap, selectedSchedule]);
 
   async function handleCopyInvite() {
-    if (!group?.join_code) return;
     try {
-      await copyText(buildInviteLink(group.join_code));
-      setSuccess("Invite link copied.");
+      setIsManagingInvite(true);
+      const invite = await createGroupInvite(groupId);
+      await copyText(buildInviteLink(invite.token));
+      setSuccess("New invite link copied. It expires in 30 days.");
       setError("");
     } catch (copyError) {
       setError(copyError instanceof Error ? copyError.message : "Unable to copy invite link");
+    } finally {
+      setIsManagingInvite(false);
+    }
+  }
+
+  async function handleRevokeInvites() {
+    if (!window.confirm("Revoke all active invite links for this group?")) return;
+    try {
+      setIsManagingInvite(true);
+      await revokeGroupInvites(groupId);
+      setSuccess("Active invite links revoked.");
+      setError("");
+    } catch (revokeError) {
+      setError(revokeError instanceof Error ? revokeError.message : "Unable to revoke invites");
+    } finally {
+      setIsManagingInvite(false);
     }
   }
 
@@ -340,19 +364,23 @@ export default function GroupDetailPage() {
                 <span className="inline-flex whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                   {group.member_count} members
                 </span>
-                <span className="inline-flex whitespace-nowrap rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                  Join code {group.join_code}
-                </span>
               </div>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-3 lg:justify-end">
             {canEditGroup ? <Button variant="secondary" onClick={() => setIsEditOpen(true)}>Edit group</Button> : null}
-            <Button variant="ghost" onClick={handleCopyInvite}>
-              <CopyIcon className="size-4" />
-              Copy invite link
-            </Button>
+            {canEditGroup ? (
+              <>
+                <Button variant="ghost" onClick={handleCopyInvite} disabled={isManagingInvite}>
+                  <CopyIcon className="size-4" />
+                  Create and copy invite
+                </Button>
+                <Button variant="ghost" onClick={handleRevokeInvites} disabled={isManagingInvite}>
+                  Revoke invites
+                </Button>
+              </>
+            ) : null}
             <Button variant="danger" onClick={() => setIsLeaveOpen(true)}>
               Leave group
             </Button>

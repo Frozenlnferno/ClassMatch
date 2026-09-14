@@ -45,7 +45,9 @@ export async function getGroupDetails(groupId) {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to fetch group details: ${response.status}`);
+        const error = new Error(errorData.error || `Failed to fetch group details: ${response.status}`);
+        error.status = response.status;
+        throw error;
     }
 
     return await response.json();
@@ -332,6 +334,36 @@ export async function uploadGroupIcon(groupId, file) {
     }
 
     return await response.json();
+}
+
+export async function createGroupInvite(groupId) {
+    const token = await getToken();
+    const response = await fetch(`${API_ROUTES.groups}/${encodeURIComponent(groupId)}/invites`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to create invite: ${response.status}`);
+    }
+
+    return response.json();
+}
+
+export async function revokeGroupInvites(groupId) {
+    const token = await getToken();
+    const response = await fetch(`${API_ROUTES.groups}/${encodeURIComponent(groupId)}/invites`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to revoke invites: ${response.status}`);
+    }
+
+    return response.json();
 }
 
 /**

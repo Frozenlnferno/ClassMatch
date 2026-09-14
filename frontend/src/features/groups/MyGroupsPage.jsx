@@ -9,8 +9,7 @@ import {
   EmptyState,
   PageHeader,
 } from "../../components/ui.jsx";
-import { ArrowRightIcon, CopyIcon, PlusIcon, UsersIcon } from "../../components/icons.jsx";
-import { buildInviteLink, copyText } from "../../utils/classMatch.js";
+import { ArrowRightIcon, PlusIcon, UsersIcon } from "../../components/icons.jsx";
 import CreateGroupModal from "./components/CreateGroupModal.jsx";
 import JoinGroupModal from "./components/JoinGroupModal.jsx";
 import { useNotifications } from "../../contexts/NotificationsContext.jsx";
@@ -21,7 +20,6 @@ export default function MyGroupsPage() {
   const [groups, setGroups] = useState([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [copiedGroupId, setCopiedGroupId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
   const [isJoinOpen, setIsJoinOpen] = useState(false);
@@ -65,7 +63,7 @@ export default function MyGroupsPage() {
       await createGroup(groupData);
       await refreshGroups();
       setIsCreateOpen(false);
-      setSuccess("Group created. Share the invite link from the group card when you're ready.");
+      setSuccess("Group created. Open the group to create and share an invite link.");
     } finally {
       setIsCreating(false);
     }
@@ -76,7 +74,7 @@ export default function MyGroupsPage() {
       setIsJoining(true);
       setError("");
       setSuccess("");
-      const response = await joinGroup(nextJoinCode.trim().toUpperCase());
+      const response = await joinGroup(nextJoinCode.trim());
       setIsJoinOpen(false);
       notifySuccess(
         response.already_member ? "Already in group" : "Group joined",
@@ -88,20 +86,6 @@ export default function MyGroupsPage() {
       throw joinError;
     } finally {
       setIsJoining(false);
-    }
-  }
-
-  async function handleCopyInvite(group) {
-    try {
-      await copyText(buildInviteLink(group.join_code));
-      setCopiedGroupId(group.id);
-      window.setTimeout(() => {
-        setCopiedGroupId((current) => (current === group.id ? "" : current));
-      }, 1800);
-      setSuccess(`Invite link copied for ${group.name}.`);
-      setError("");
-    } catch (copyError) {
-      setError(copyError instanceof Error ? copyError.message : "Unable to copy invite link");
     }
   }
 
@@ -183,28 +167,11 @@ export default function MyGroupsPage() {
                         <span className="inline-flex whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                           {group.member_count} members
                         </span>
-                        <span className="inline-flex whitespace-nowrap rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                          Code {group.join_code}
-                        </span>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-3">
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleCopyInvite(group);
-                        }}
-                        className="motion-lift inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition-[transform,background-color,box-shadow] duration-200 hover:bg-slate-200"
-                      >
-                        <CopyIcon className="size-4" />
-                        {copiedGroupId === group.id ? "Copied!" : "Copy invite link"}
-                      </button>
-                    </div>
-
                     <Link
                       to={`/groups/${group.id}`}
                       onClick={(event) => event.stopPropagation()}

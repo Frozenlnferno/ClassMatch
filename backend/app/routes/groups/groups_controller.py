@@ -5,6 +5,7 @@ from flask import request, jsonify, g, Blueprint
 from app.config import Config
 from app.utils.auth import require_auth
 from app.utils.logger import get_logger
+from app.utils.rate_limit import allow_join_attempt
 from werkzeug.utils import secure_filename
 
 from app.utils.supabase_admin import delete_public_file_from_url, upload_public_file
@@ -14,12 +15,14 @@ from .groups_service import (
     change_group_info,
     change_group_role,
     create_group,
+    create_group_invite,
     get_group_details,
     get_group_members,
     get_user_groups,
     join_group,
     kick_member,
     leave_group,
+    revoke_group_invites,
 )
 
 bp = Blueprint("groups", __name__)
@@ -133,6 +136,9 @@ def join_group_route():
     data = request.get_json(silent=True) or {}
     join_code = data["join_code"] if "join_code" in data else None
 
+    if not allow_join_attempt(user_id, request.remote_addr):
+        return jsonify({"error": "Too many join attempts. Try again later."}), 429, {"Retry-After": "60"}
+
     try:
         result = join_group(user_id, join_code)
     except Exception as e:
@@ -148,6 +154,34 @@ def join_group_route():
 @bp.route("/join", methods=["GET"])
 def reject_get_join_group_route():
     return jsonify({"error": "Method not allowed. Use POST to join a group."}), 405, {"Allow": "POST"}
+
+
+@bp.route("/<group_id>/invites", methods=["POST"])
+@require_auth
+def create_group_invite_route(group_id):
+    user_id = g.user["sub"]
+    try:
+        invite = create_group_invite(user_id, group_id)
+    except PermissionError as e:
+        return jsonify({"error": str(e)}), 403
+    except Exception:
+        logger.exception("Failed to create group invite", extra={"group_id": group_id})
+        return jsonify({"error": "Unable to create invite"}), 400
+    return jsonify(invite), 201
+
+
+@bp.route("/<group_id>/invites", methods=["DELETE"])
+@require_auth
+def revoke_group_invites_route(group_id):
+    user_id = g.user["sub"]
+    try:
+        revoke_group_invites(user_id, group_id)
+    except PermissionError as e:
+        return jsonify({"error": str(e)}), 403
+    except Exception:
+        logger.exception("Failed to revoke group invites", extra={"group_id": group_id})
+        return jsonify({"error": "Unable to revoke invites"}), 400
+    return jsonify({"status": "Invites revoked successfully"}), 200
 
 
 @bp.route("/leave", methods=["POST"])
@@ -270,6 +304,9 @@ def change_role_route(group_id):
 def join_group_by_url_route(join_code):
     # Join a group using a join code
     user_id = g.user["sub"]
+
+    if not allow_join_attempt(user_id, request.remote_addr):
+        return jsonify({"error": "Too many join attempts. Try again later."}), 429, {"Retry-After": "60"}
 
     try:
         result = join_group(user_id, join_code)

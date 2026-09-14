@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import useSession from "../../utils/useSession.js";
-import { getUserGroups, joinGroupByInviteCodeURL } from "../groups/groupService.js";
+import { joinGroupByInviteCodeURL } from "../groups/groupService.js";
 import { Button, Card, PageHeader, buttonStyles } from "../../components/ui.jsx";
-import { ArrowRightIcon, CopyIcon, LogoMark, UsersIcon } from "../../components/icons.jsx";
+import { CopyIcon, LogoMark, UsersIcon } from "../../components/icons.jsx";
 import { buildInviteLink, copyText, withNextPath } from "../../utils/classMatch.js";
 import { useNotifications } from "../../contexts/NotificationsContext.jsx";
 
@@ -12,50 +12,30 @@ export default function InvitePage() {
   const navigate = useNavigate();
   const { session, isSessionLoading } = useSession();
   const { notifyError } = useNotifications();
-  const [isJoining, setIsJoining] = useState(false);
-  const [isCheckingMembership, setIsCheckingMembership] = useState(false);
   const [copied, setCopied] = useState(false);
+  const attemptedInviteRef = useRef("");
 
   const inviteLink = useMemo(() => buildInviteLink(inviteCode), [inviteCode]);
 
   useEffect(() => {
-    if (!session) {
-      setIsCheckingMembership(false);
-      return;
-    }
+    if (isSessionLoading || !session || !inviteCode || attemptedInviteRef.current === inviteCode) return;
+    attemptedInviteRef.current = inviteCode;
 
-    let isActive = true;
-
-    async function redirectExistingMember() {
+    async function acceptInvite() {
       try {
-        setIsCheckingMembership(true);
-        const groups = await getUserGroups();
-        if (!isActive) {
+        const response = await joinGroupByInviteCodeURL(inviteCode);
+        if (response.group_id) {
+          navigate(`/groups/${response.group_id}`, { replace: true });
           return;
         }
-
-        const existingGroup = groups.find((group) => group.join_code === inviteCode.trim().toUpperCase());
-        if (existingGroup) {
-          navigate(`/groups/${existingGroup.id}`, { replace: true });
-          return;
-        }
-      } catch (loadError) {
-        if (isActive) {
-          notifyError("Invite issue", loadError instanceof Error ? loadError.message : "Unable to check this invite right now");
-        }
-      } finally {
-        if (isActive) {
-          setIsCheckingMembership(false);
-        }
+        navigate("/mygroups", { replace: true });
+      } catch (joinError) {
+        notifyError("Invite issue", joinError instanceof Error ? joinError.message : "Unable to join this group right now");
       }
     }
 
-    redirectExistingMember();
-
-    return () => {
-      isActive = false;
-    };
-  }, [inviteCode, navigate, notifyError, session]);
+    acceptInvite();
+  }, [inviteCode, isSessionLoading, navigate, notifyError, session]);
 
   async function handleCopy() {
     try {
@@ -64,22 +44,6 @@ export default function InvitePage() {
       window.setTimeout(() => setCopied(false), 1800);
     } catch (copyError) {
       notifyError("Invite issue", copyError instanceof Error ? copyError.message : "Couldn't copy invite link");
-    }
-  }
-
-  async function handleJoin() {
-    try {
-      setIsJoining(true);
-      const response = await joinGroupByInviteCodeURL(inviteCode);
-      if (response.group_id) {
-        navigate(`/groups/${response.group_id}`, { replace: true });
-        return;
-      }
-      navigate("/mygroups", { replace: true });
-    } catch (joinError) {
-      notifyError("Invite issue", joinError instanceof Error ? joinError.message : "Unable to join this group right now");
-    } finally {
-      setIsJoining(false);
     }
   }
 
@@ -125,7 +89,7 @@ export default function InvitePage() {
           </div>
 
           <div className="flex flex-col justify-center p-8 sm:p-10">
-            {isSessionLoading || isCheckingMembership ? (
+            {isSessionLoading ? (
               <div className="space-y-3">
                 <div className="h-4 w-28 rounded-full bg-slate-100" />
                 <div className="h-10 w-full rounded-2xl bg-slate-100" />
@@ -135,18 +99,15 @@ export default function InvitePage() {
               <div className="space-y-6">
                 <div>
                   <div className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-600">Signed in</div>
-                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">Ready to join this group?</h2>
+                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">Joining your group</h2>
                   <p className="mt-3 text-sm leading-6 text-slate-600">
-                    Join now and we'll take you straight into the group workspace.
+                    Accepting your invite and taking you to the group workspace.
                   </p>
                 </div>
-                <Button size="lg" onClick={handleJoin} disabled={isJoining} className="w-full">
-                  {isJoining ? "Joining group..." : "Join group"}
-                  <ArrowRightIcon className="size-4" />
-                </Button>
-                <Link to="/mygroups" className={buttonStyles({ variant: "secondary", size: "lg", className: "w-full" })}>
-                  Back to my groups
-                </Link>
+                <div className="flex items-center gap-3 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+                  <span className="size-4 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
+                  Joining group...
+                </div>
               </div>
             ) : (
               <div className="space-y-6">

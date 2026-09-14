@@ -1,15 +1,23 @@
 import secrets
-import string
+import hashlib
+from datetime import datetime, timezone
 
 from app.utils.db import get_cursor
 
-ALPHABET = string.ascii_uppercase  # A-Z
 UNSET = object()
 GROUP_NOT_FOUND_ERROR = "Group not found"
 
 
-def generate_join_code(length=10):
-    return ''.join(secrets.choice(ALPHABET) for _ in range(length))
+def _hash_invite_token(token):
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _serialize_invite(invite_id, token, expires_at):
+    return {
+        "invite_id": invite_id,
+        "token": token,
+        "expires_at": expires_at.isoformat().replace("+00:00", "Z") if expires_at else None,
+    }
 
 
 def _get_next_group_owner(cur, group_id):
@@ -130,11 +138,11 @@ def create_group(uid, groupName, description, joinable=True, group_icon_url=None
     with get_cursor() as cur:
         cur.execute(
             """
-                INSERT INTO groups (name, description, created_by, join_code, joinable, group_icon_url)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO groups (name, description, created_by, joinable, group_icon_url)
+                VALUES (%s, %s, %s, %s, %s)
                 RETURNING id;
             """,
-            (groupName, description, uid, generate_join_code(), joinable, group_icon_url)
+            (groupName, description, uid, joinable, group_icon_url)
         )
         group_id = cur.fetchone()[0]
         cur.execute(
@@ -148,24 +156,34 @@ def create_group(uid, groupName, description, joinable=True, group_icon_url=None
 
 
 def join_group(uid, join_code):
-    if not uid or not join_code:
-        raise ValueError("Invalid input: uid and join_code are required")
+    if not uid or not join_code or not isinstance(join_code, str):
+        raise ValueError("Invalid or expired invite")
+
+    token_hash = _hash_invite_token(join_code.strip())
 
     with get_cursor() as cur:
         cur.execute(
             """
-                SELECT id, joinable FROM groups WHERE join_code = %s;
+                SELECT i.id, g.id, g.joinable, i.expires_at, i.max_uses, i.use_count
+                FROM group_invites i
+                JOIN groups g ON g.id = i.group_id
+                WHERE i.token_hash = %s
+                FOR UPDATE;
             """,
-            (join_code,)
+            (token_hash,)
         )
-        group_data = cur.fetchone()
-        if not group_data:
-            raise ValueError("Invalid join code")
+        invite = cur.fetchone()
+        if not invite:
+            raise ValueError("Invalid or expired invite")
 
-        group_id = group_data[0]
-        is_joinable = group_data[1]
+        invite_id, group_id, is_joinable, expires_at, max_uses, use_count = invite
+        now = datetime.now(timezone.utc)
+        if expires_at and expires_at <= now:
+            raise ValueError("Invalid or expired invite")
         if not is_joinable:
-            raise ValueError("Group is not joinable")
+            raise ValueError("Group is not accepting invites")
+        if max_uses is not None and use_count >= max_uses:
+            raise ValueError("Invalid or expired invite")
 
         cur.execute(
             """
@@ -182,10 +200,63 @@ def join_group(uid, join_code):
                 "group_id": group_id,
                 "already_member": True,
             }
+        cur.execute(
+            """
+                UPDATE group_invites
+                SET use_count = use_count + 1
+                WHERE id = %s;
+            """,
+            (invite_id,)
+        )
     return {
         "group_id": group_id,
         "already_member": False,
     }
+
+
+def create_group_invite(admin_uid, group_id, expires_in_days=30):
+    if not admin_uid or not group_id:
+        raise ValueError("Invalid input: admin_uid and group_id are required")
+
+    token = secrets.token_urlsafe(32)
+    with get_cursor() as cur:
+        _require_group_admin_or_owner(cur, group_id, admin_uid)
+        cur.execute(
+            """
+                UPDATE group_invites
+                SET revoked_at = NOW()
+                WHERE group_id = %s AND revoked_at IS NULL AND expires_at > NOW();
+            """,
+            (group_id,)
+        )
+        cur.execute(
+            """
+                INSERT INTO group_invites (group_id, created_by, token_hash, expires_at)
+                VALUES (%s, %s, %s, NOW() + (%s * INTERVAL '1 day'))
+                RETURNING id, expires_at;
+            """,
+            (group_id, admin_uid, _hash_invite_token(token), expires_in_days)
+        )
+        invite_id, stored_expires_at = cur.fetchone()
+
+    return _serialize_invite(invite_id, token, stored_expires_at)
+
+
+def revoke_group_invites(admin_uid, group_id):
+    if not admin_uid or not group_id:
+        raise ValueError("Invalid input: admin_uid and group_id are required")
+
+    with get_cursor() as cur:
+        _require_group_admin_or_owner(cur, group_id, admin_uid)
+        cur.execute(
+            """
+                UPDATE group_invites
+                SET revoked_at = NOW()
+                WHERE group_id = %s AND revoked_at IS NULL;
+            """,
+            (group_id,)
+        )
+    return True
 
 
 def leave_group(uid, group_id):
@@ -284,7 +355,6 @@ def get_user_groups(uid):
                 SELECT
                 g.id,
                 g.name,
-                g.join_code,
                 gm.role,
                 (
                     SELECT COUNT(*)
@@ -305,11 +375,10 @@ def get_user_groups(uid):
         {
             "id": row[0],
             "name": row[1],
-            "join_code": row[2],
-            "role": row[3],
-            "member_count": row[4],
-            "joinable": row[5],
-            "group_icon_url": row[6],
+            "role": row[2],
+            "member_count": row[3],
+            "joinable": row[4],
+            "group_icon_url": row[5],
         }
         for row in rows
     ]
@@ -326,7 +395,6 @@ def get_group_details(uid, group_id):
                     g.id,
                     g.name,
                     g.description,
-                    g.join_code,
                     g.joinable,
                     g.group_icon_url,
                     gm.role,
@@ -353,11 +421,10 @@ def get_group_details(uid, group_id):
         "id": row[0],
         "name": row[1],
         "description": row[2],
-        "join_code": row[3],
-        "joinable": row[4],
-        "group_icon_url": row[5],
-        "my_role": row[6],
-        "member_count": row[7],
+        "joinable": row[3],
+        "group_icon_url": row[4],
+        "my_role": row[5],
+        "member_count": row[6],
     }
 
 

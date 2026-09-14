@@ -352,7 +352,6 @@ Key Spring variables:
 - Schedules and their worker should remain together during any incremental migration.
 - Nginx is already prepared for path-based migration by enabling a more-specific `/api/users` proxy before the general `/api/` rule.
 - Redis is used only for schedule jobs. It can later be retained, replaced by a PostgreSQL job table, or replaced by a maintained job framework without changing the frontend's `202 + job_id + polling` contract.
-- A deployment webhook receiver is not yet implemented; `DEPLOYMENT.md` documents the validation and serialization requirements for adding one.
 
 ## 12. Source Map
 

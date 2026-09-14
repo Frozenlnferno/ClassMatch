@@ -56,11 +56,15 @@ jobs:
         run: python -m pip install -r requirements.txt
       - name: Run tests
         run: python -m unittest discover -s tests -v
+      - name: Check deployment scripts
+        working-directory: .
+        run: bash -n deployment/deploy.sh
 
   publish:
     name: Publish production images
     if: >-
       github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main' &&
       vars.DOCKERHUB_USERNAME != '' &&
       vars.VITE_SUPABASE_URL != '' &&
       vars.VITE_SUPABASE_PUBLISHABLE_KEY != ''
@@ -116,3 +120,20 @@ jobs:
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/classmatch-frontend:latest
             ${{ vars.DOCKERHUB_USERNAME }}/classmatch-frontend:${{ github.sha }}
+
+  deploy-production:
+    name: Deploy production
+    if: >-
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, linux, production]
+    timeout-minutes: 20
+    needs:
+      - publish
+    environment: production
+    concurrency:
+      group: production-deployment
+      cancel-in-progress: false
+    steps:
+      - name: Deploy locally
+        run: /opt/classmatch/deployment/deploy.sh "$GITHUB_SHA"

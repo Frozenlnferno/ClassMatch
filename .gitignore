@@ -1,0 +1,41 @@
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / frontend builds
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Java / Maven / Gradle builds
+target/
+build/
+.gradle/
+*.class
+
+# Logs
+*.log
+logs/
+
+# Editors, OS files, and local agent state
+.vscode/
+.idea/
+.agents/
+.codex/
+.DS_Store
+Thumbs.db
+
+# Supabase CLI local state
+supabase/.branches/
+supabase/.temp/

@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/overridden-by-testcontainers
+    username: test
+    password: test
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://issuer.test.example
+          jwk-set-uri: https://issuer.test.example/.well-known/jwks.json
+          audiences:
+            - authenticated
+
+classmatch:
+  security:
+    frontend-origin: http://localhost:5173

@@ -1,0 +1,53 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    env_file: ./backend/.env
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - redis
+
+  backend-java:
+    build:
+      context: ./backend-java
+      target: dev
+    env_file: ./backend-java/.env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend-java:/app
+    depends_on:
+      - redis
+
+  worker:
+    build:
+      context: ./backend
+      target: dev
+    env_file: ./backend/.env
+    command: ["python", "run_worker.py"]
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      target: prod
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY}
+        VITE_FRONTEND_ORIGIN: ${VITE_FRONTEND_ORIGIN}
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend

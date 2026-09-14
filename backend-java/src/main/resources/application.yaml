@@ -1,0 +1,39 @@
+server:
+  port: ${SERVER_PORT:5001}
+
+spring:
+  config:
+    import: optional:file:.env[.properties]
+
+  application:
+    name: classmatch-backend
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SUPABASE_JWT_ISSUER}
+          jwk-set-uri: ${SUPABASE_JWKS_URL}
+          jws-algorithms:
+            - ES256
+          audiences:
+            - ${SUPABASE_JWT_AUDIENCE:authenticated}
+
+classmatch:
+  security:
+    frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never

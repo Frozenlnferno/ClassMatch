@@ -1,0 +1,32 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  backend:
+    image: ${DOCKERHUB_USERNAME}/classmatch-backend:latest
+    container_name: classmatch-backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    expose:
+      - "5000"
+    depends_on:
+      - redis
+
+  worker:
+    image: ${DOCKERHUB_USERNAME}/classmatch-backend:latest
+    container_name: classmatch-worker
+    restart: unless-stopped
+    env_file: ./backend/.env
+    command: ["python", "run_worker.py"]
+    depends_on:
+      - redis
+
+  frontend:
+    image: ${DOCKERHUB_USERNAME}/classmatch-frontend:latest
+    container_name: classmatch-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend

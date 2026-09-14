@@ -131,6 +131,8 @@ jobs:
     needs:
       - publish
     environment: production
+    env:
+      DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
     concurrency:
       group: production-deployment
       cancel-in-progress: false

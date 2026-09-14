@@ -32,6 +32,7 @@ import {
   formatCourseCode,
   formatScheduleLabel,
   formatTimeRange,
+  getMostRecentSchedule,
   getScheduleKey,
   normalizeCourse,
   parseScheduleKey,
@@ -190,14 +191,15 @@ export default function GroupDetailPage() {
       setGroup(groupResponse);
       setMembers(membersResponse);
       setSchedules(schedulesResponse);
+      const mostRecentSchedule = getMostRecentSchedule(schedulesResponse);
 
       const currentSelectedKey = selectedKeyRef.current;
       const desiredKey = nextSelectedKey && schedulesResponse.some((schedule) => getScheduleKey(schedule) === nextSelectedKey)
         ? nextSelectedKey
         : currentSelectedKey && schedulesResponse.some((schedule) => getScheduleKey(schedule) === currentSelectedKey)
           ? currentSelectedKey
-          : schedulesResponse[0]
-            ? getScheduleKey(schedulesResponse[0])
+          : mostRecentSchedule
+            ? getScheduleKey(mostRecentSchedule)
             : "";
       setSelectedKey(desiredKey);
       return desiredKey;

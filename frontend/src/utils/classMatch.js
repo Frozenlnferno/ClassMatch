@@ -27,8 +27,14 @@ export function sortSchedules(schedules) {
   return [...schedules].sort((a, b) => {
     const yearDiff = Number(b.year) - Number(a.year);
     if (yearDiff !== 0) return yearDiff;
-    return (TERM_ORDER[b.term] || 0) - (TERM_ORDER[a.term] || 0);
+    const bTerm = String(b.term || "").toLowerCase();
+    const aTerm = String(a.term || "").toLowerCase();
+    return (TERM_ORDER[bTerm] || 0) - (TERM_ORDER[aTerm] || 0);
   });
+}
+
+export function getMostRecentSchedule(schedules) {
+  return sortSchedules(schedules)[0] || null;
 }
 
 export function groupSchedulesByYear(schedules) {

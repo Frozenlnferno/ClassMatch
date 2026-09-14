@@ -19,6 +19,7 @@ import {
 import { CopyIcon, PlusIcon, TrashIcon, UploadIcon } from "../../components/icons.jsx";
 import {
   formatScheduleLabel,
+  getMostRecentSchedule,
   getScheduleKey,
   normalizeCourse,
   parseScheduleKey,
@@ -96,14 +97,15 @@ export default function SchedulePage() {
       setError("");
       const response = await getScheduleList();
       setSchedules(response);
+      const mostRecentSchedule = getMostRecentSchedule(response);
 
       const currentSelectedKey = selectedKeyRef.current;
       const desiredKey = nextSelectedKey && response.some((schedule) => getScheduleKey(schedule) === nextSelectedKey)
         ? nextSelectedKey
         : currentSelectedKey && response.some((schedule) => getScheduleKey(schedule) === currentSelectedKey)
           ? currentSelectedKey
-          : response[0]
-            ? getScheduleKey(response[0])
+          : mostRecentSchedule
+            ? getScheduleKey(mostRecentSchedule)
             : "";
 
       setSelectedKey(desiredKey);

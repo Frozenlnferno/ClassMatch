@@ -702,7 +702,15 @@ def get_all_schedules(uid):
                     ON ss.schedule_id = s.id
                 WHERE s.user_id = %s
                 GROUP BY s.id, s.year, s.term
-                ORDER BY s.year DESC, s.term DESC;
+                ORDER BY
+                    s.year DESC,
+                    CASE LOWER(s.term)
+                        WHEN 'fall' THEN 3
+                        WHEN 'summer' THEN 2
+                        WHEN 'spring' THEN 1
+                        ELSE 0
+                    END DESC,
+                    s.id DESC;
             """,
             (uid,)
         )

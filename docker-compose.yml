@@ -28,17 +28,17 @@ services:
       retries: 10
       start_period: 10s
 
-  backend-java:
-    profiles:
-      - migration
-    build:
-      context: ./backend-java
-      target: dev
-    env_file: ./backend-java/.env
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./backend-java:/app
+  # backend-java:
+  #   profiles:
+  #     - migration
+  #   build:
+  #     context: ./backend-java
+  #     target: dev
+  #   env_file: ./backend-java/.env
+  #   ports:
+  #     - "8080:8080"
+  #   volumes:
+  #     - ./backend-java:/app
 
   worker:
     build:

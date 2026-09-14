@@ -217,6 +217,9 @@ export default function CreateScheduleModal({
                   <li>Open the email and download the attached file. No need to open it.</li>
                   <li>Upload the .ics file below.</li>
                 </ol>
+                <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+                  Note: Classes without a location, such as remote classes, may not be included in the import. Enter those classes manually using their CRNs.
+                </p>
               </div>
             </Card>
 

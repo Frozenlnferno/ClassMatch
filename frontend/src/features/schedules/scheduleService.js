@@ -1,5 +1,6 @@
 import { API_ROUTES } from "../../config/api.js";
 import { getAccessToken } from "../../utils/authToken.js";
+import { sortSchedules } from "../../utils/classMatch.js";
 
 const API_BASE = API_ROUTES.schedules;
 
@@ -13,7 +14,8 @@ export async function getScheduleList() {
         headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error(`Failed to fetch schedules: ${res.status}`);
-    return res.json();
+    const schedules = await res.json();
+    return sortSchedules(Array.isArray(schedules) ? schedules : []);
 }
 
 export async function getScheduleClasses(term, year) {

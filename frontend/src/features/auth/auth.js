@@ -9,14 +9,15 @@ import { buildPublicAppUrl } from "../../config/site.js";
  * @returns {Promise<object>} object containing "user" and "session".
  * @throws {Error} if sign up fails.
 **/
-export async function signUpWithEmail(email, password, name) {
+export async function signUpWithEmail(email, password, name, redirectPath = "/mygroups") {
     const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
             data: {
                 name
-            }
+            },
+            emailRedirectTo: buildPublicAppUrl(redirectPath),
         }
     })
     if (error) { throw error; }

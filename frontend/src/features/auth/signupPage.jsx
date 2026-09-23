@@ -39,6 +39,7 @@ export default function SignUpPage() {
         normalizeEmail(form.email),
         form.password,
         normalizeName(form.name),
+        nextPath,
       );
 
       if (data.session) {

@@ -11,7 +11,6 @@ import {
   kickMember,
   leaveGroup,
   removeGroupIcon,
-  revokeGroupInvites,
   updateGroupInfo,
   uploadGroupIcon,
 } from "./groupService.js";
@@ -19,6 +18,7 @@ import { getScheduleClasses, getScheduleList } from "../schedules/scheduleServic
 import { getPublicProfile } from "../settings/settingsService.js";
 import {
   Avatar,
+  AvatarStack,
   Badge,
   Button,
   Card,
@@ -67,7 +67,9 @@ export default function GroupDetailPage() {
   const [memberPendingKick, setMemberPendingKick] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
+  const [isGroupActionsOpen, setIsGroupActionsOpen] = useState(false);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
+  const [areAllMembersVisible, setAreAllMembersVisible] = useState(false);
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true);
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
   const [isSavingGroup, setIsSavingGroup] = useState(false);
@@ -116,6 +118,10 @@ export default function GroupDetailPage() {
   useEffect(() => {
     setIsBioExpanded(false);
   }, [group?.description, group?.id]);
+
+  useEffect(() => {
+    setAreAllMembersVisible(false);
+  }, [groupId]);
 
   useEffect(() => {
     if (!selectedMember?.user_id) {
@@ -240,20 +246,6 @@ export default function GroupDetailPage() {
     }
   }
 
-  async function handleRevokeInvites() {
-    if (!window.confirm("Revoke all active invite links for this group?")) return;
-    try {
-      setIsManagingInvite(true);
-      await revokeGroupInvites(groupId);
-      setSuccess("Active invite links revoked.");
-      setError("");
-    } catch (revokeError) {
-      setError(revokeError instanceof Error ? revokeError.message : "Unable to revoke invites");
-    } finally {
-      setIsManagingInvite(false);
-    }
-  }
-
   async function handleLeaveGroup() {
     try {
       setError("");
@@ -351,8 +343,8 @@ export default function GroupDetailPage() {
 
   return (
     <div className="motion-fade-up space-y-6">
-      <Card className="motion-fade-up motion-delay-1 space-y-4">
-        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">Group details</div>
+      <Card className="motion-fade-up motion-delay-1 space-y-5">
+        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#312E81]">Group details</div>
 
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
@@ -368,40 +360,67 @@ export default function GroupDetailPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3 lg:justify-end">
-            {canEditGroup ? <Button variant="secondary" onClick={() => setIsEditOpen(true)}>Edit group</Button> : null}
+          <div className="flex items-center gap-3 lg:justify-end">
             {canEditGroup ? (
-              <>
-                <Button variant="ghost" onClick={handleCopyInvite} disabled={isManagingInvite}>
-                  <CopyIcon className="size-4" />
-                  Create and copy invite
+              <Button onClick={handleCopyInvite} disabled={isManagingInvite}>
+                <CopyIcon className="size-4" />
+                {isManagingInvite ? "Copying..." : "Copy invite link"}
+              </Button>
+            ) : (
+              <Button variant="danger" onClick={() => setIsLeaveOpen(true)}>
+                Leave group
+              </Button>
+            )}
+            {canEditGroup ? (
+              <div className="relative">
+                <Button variant="secondary" aria-label="Group actions" aria-expanded={isGroupActionsOpen} onClick={() => setIsGroupActionsOpen((open) => !open)}>
+                  •••
                 </Button>
-                <Button variant="ghost" onClick={handleRevokeInvites} disabled={isManagingInvite}>
-                  Revoke invites
-                </Button>
-              </>
+                {isGroupActionsOpen ? (
+                  <div className="motion-scale-in absolute right-0 top-[calc(100%+0.5rem)] z-20 w-48 rounded-2xl border border-[#E6E8F0] bg-white p-2 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsGroupActionsOpen(false);
+                        setIsEditOpen(true);
+                      }}
+                      className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    >
+                      Edit group
+                    </button>
+                    <div className="my-2 border-t border-[#E6E8F0]" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsGroupActionsOpen(false);
+                        setIsLeaveOpen(true);
+                      }}
+                      className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50"
+                    >
+                      Leave group
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             ) : null}
-            <Button variant="danger" onClick={() => setIsLeaveOpen(true)}>
-              Leave group
-            </Button>
           </div>
         </div>
-      </Card>
 
-      <Card className="motion-fade-up motion-delay-1 space-y-3">
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Group bio</div>
-        <p className="text-sm leading-6 text-slate-600 sm:text-base">
-          {displayedBio}
-        </p>
-        {shouldTruncateBio ? (
-          <button
-            type="button"
-            onClick={() => setIsBioExpanded((current) => !current)}
-            className="w-fit text-sm font-semibold text-blue-600 transition hover:text-blue-700"
-          >
-            {isBioExpanded ? "Show less" : "See all"}
-          </button>
-        ) : null}
+        <div className="border-t border-[#E6E8F0] pt-5">
+          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Group bio</div>
+          <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+            {displayedBio}
+          </p>
+          {shouldTruncateBio ? (
+            <button
+              type="button"
+              onClick={() => setIsBioExpanded((current) => !current)}
+              className="mt-3 w-fit text-sm font-semibold text-[#312E81] transition hover:text-[#4338CA]"
+            >
+              {isBioExpanded ? "Show less" : "See all"}
+            </button>
+          ) : null}
+        </div>
       </Card>
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -415,7 +434,7 @@ export default function GroupDetailPage() {
           </div>
 
           <div className="space-y-3">
-            {members.map((member) => {
+            {members.map((member, index) => {
               const canManage = canManageMember(group.my_role, member.role, member.user_id === currentUserId);
               const canPromote = canManage && member.role === "member";
               const canDemote = group.my_role === "owner" && member.role === "admin" && member.user_id !== currentUserId;
@@ -433,7 +452,10 @@ export default function GroupDetailPage() {
                       setSelectedMember(member);
                     }
                   }}
-                  className="motion-lift w-full rounded-[28px] border border-slate-200 bg-slate-50/70 p-4 text-left transition-[transform,border-color,background-color,box-shadow] duration-200 hover:border-blue-200 hover:bg-blue-50/40"
+                  className={[
+                    "motion-lift w-full rounded-[28px] border border-[#E6E8F0] bg-slate-50/70 p-4 text-left transition-[transform,border-color,background-color,box-shadow] duration-200 hover:border-cyan-300 hover:bg-cyan-50/40",
+                    index >= 5 && !areAllMembersVisible ? "hidden sm:block" : "",
+                  ].filter(Boolean).join(" ")}
                 >
                   <div
                     className={[
@@ -460,7 +482,7 @@ export default function GroupDetailPage() {
                               handleRoleChange(member, "admin");
                             }}
                             disabled={busyMemberId === member.user_id}
-                            className="motion-lift shrink-0 rounded-2xl bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-700 transition-[transform,background-color,box-shadow] duration-200 hover:bg-blue-200 disabled:opacity-60"
+                            className="motion-lift shrink-0 rounded-2xl bg-indigo-100 px-3 py-2 text-xs font-semibold text-indigo-700 transition-[transform,background-color,box-shadow] duration-200 hover:bg-indigo-200 disabled:opacity-60"
                           >
                             Promote
                           </button>
@@ -497,6 +519,16 @@ export default function GroupDetailPage() {
                 </div>
               );
             })}
+            {members.length > 5 ? (
+              <button
+                type="button"
+                aria-expanded={areAllMembersVisible}
+                onClick={() => setAreAllMembersVisible((current) => !current)}
+                className="motion-lift w-full rounded-2xl border border-[#E6E8F0] bg-white px-4 py-3 text-sm font-semibold text-[#312E81] transition-[transform,border-color,background-color] duration-200 hover:border-cyan-300 hover:bg-cyan-50/60 sm:hidden"
+              >
+                {areAllMembersVisible ? "Show fewer members" : `See all members (${members.length})`}
+              </button>
+            ) : null}
           </div>
         </Card>
 
@@ -532,7 +564,7 @@ export default function GroupDetailPage() {
                     key={`${course.sectionId}-${course.crn}`}
                     type="button"
                     onClick={() => setSelectedCourse(course)}
-                    className="motion-lift w-full rounded-[28px] border border-slate-200 bg-white p-5 text-left transition-[transform,border-color,background-color,box-shadow] duration-200 hover:border-blue-200 hover:bg-blue-50/30"
+                    className="motion-lift w-full rounded-[28px] border border-[#E6E8F0] bg-white p-5 text-left transition-[transform,border-color,background-color,box-shadow] duration-200 hover:border-cyan-300 hover:bg-cyan-50/30"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
@@ -556,10 +588,8 @@ export default function GroupDetailPage() {
                       </div>
                       <div>
                         <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Current classmates</div>
-                        <div className="mt-1 font-medium text-slate-700">
-                          {course.currentClassmates.length
-                            ? course.currentClassmates.map((match) => match.member_name).join(", ")
-                            : "No current overlap"}
+                        <div className="mt-2">
+                          <AvatarStack people={course.currentClassmates} label="current classmates" />
                         </div>
                       </div>
                     </div>

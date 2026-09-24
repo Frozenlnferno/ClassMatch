@@ -69,8 +69,8 @@ export default function LandingPage() {
           <Card className="motion-fade-up motion-delay-1 relative overflow-hidden p-0">
             <div className="absolute inset-x-6 top-6 h-32 rounded-[28px] bg-[radial-gradient(circle_at_top_left,_rgba(96,165,250,0.24),_transparent_58%)]" />
             <div className="relative space-y-4 p-6 sm:p-8">
-              <div className="rounded-[28px] border border-blue-100 bg-blue-50/80 p-5">
-                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">At a glance</div>
+              <div className="rounded-[28px] border border-indigo-100 bg-indigo-50/80 p-5">
+                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#312E81]">At a glance</div>
                 <div className="mt-3 text-2xl font-semibold text-slate-900">A ClassMatch workspace built around UIUC schedules, groups, and student profiles.</div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -96,7 +96,7 @@ export default function LandingPage() {
         <section className="motion-fade-up motion-delay-2 rounded-[32px] border border-white/80 bg-white/90 px-6 py-8 shadow-[0_22px_60px_-34px_rgba(15,23,42,0.18)] sm:px-8 sm:py-10">
           <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">How it works</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#312E81]">How it works</div>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">Three simple steps to get connected</h2>
             </div>
             <p className="max-w-xl text-sm leading-6 text-slate-500">
@@ -112,7 +112,7 @@ export default function LandingPage() {
                 <Card key={step.title} className="motion-lift h-full rounded-[28px] bg-slate-50/70 p-6 shadow-none">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex size-11 items-center justify-center rounded-2xl bg-blue-600 text-white">
+                      <div className="flex size-11 items-center justify-center rounded-2xl bg-[#312E81] text-white">
                         <Icon className="size-5" />
                       </div>
                       <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">

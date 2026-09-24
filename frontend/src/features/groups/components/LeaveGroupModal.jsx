@@ -16,7 +16,7 @@ export default function LeaveGroupModal({ group, isOpen, onClose, onConfirm }) {
       )}
     >
       <div className="text-sm leading-6 text-slate-600">
-        You can rejoin later with an invite link or join code if the group is still open to new members.
+        You can rejoin later with a new invite link if the group is still open to new members.
       </div>
     </Modal>
   );

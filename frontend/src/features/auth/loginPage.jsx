@@ -49,38 +49,33 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-6xl items-center px-4 py-10 sm:px-6 lg:px-8">
-      <div className="grid w-full gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-        <Card className="motion-fade-up hidden bg-[linear-gradient(180deg,_rgba(239,246,255,0.92)_0%,_rgba(255,255,255,0.9)_100%)] p-10 lg:block">
-          <div className="space-y-8">
-            <Link to="/" className="inline-flex items-center gap-3">
-              <LogoMark className="size-11 text-blue-600" />
-              <div>
-                <div className="text-base font-semibold text-slate-900">ClassMatch</div>
-                <div className="text-sm text-slate-500">Your shared-course workspace</div>
-              </div>
-            </Link>
-
-            <div className="space-y-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">Welcome back</div>
-              <h1 className="text-4xl font-semibold tracking-tight text-slate-950">
-                Pick up right where your schedule and groups left off.
-              </h1>
-              <p className="max-w-lg text-base leading-7 text-slate-600">
-                Log in to manage schedules, see classmates in common courses, and keep group conversations centered around the classes that matter.
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="motion-fade-up motion-delay-1 p-8 sm:p-10">
+    <div className="mx-auto flex min-h-screen max-w-xl items-center px-4 py-10 sm:px-6">
+      <div className="w-full">
+        <Card className="motion-fade-up p-8 sm:p-10">
           <div className="space-y-6">
+            <Link to="/" className="inline-flex items-center gap-3">
+              <LogoMark className="size-10 text-[#312E81]" />
+              <span className="text-base font-semibold text-slate-900">ClassMatch</span>
+            </Link>
             <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">Log in</div>
-              <h2 className="text-3xl font-semibold tracking-tight text-slate-900">Access your ClassMatch account</h2>
-              <p className="text-sm leading-6 text-slate-500">
-                Use your email and password, or continue with Google.
-              </p>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Log in</h1>
+              <p className="text-sm leading-6 text-slate-500">Welcome back. Pick up where your schedule and groups left off.</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={isGoogleLoading}
+              className={buttonStyles({ variant: "secondary", size: "lg", className: "w-full" })}
+            >
+              <span className="text-base font-bold text-[#4285F4]">G</span>
+              {isGoogleLoading ? "Redirecting to Google..." : "Continue with Google"}
+            </button>
+
+            <div className="flex items-center gap-3 text-xs text-slate-400">
+              <span className="h-px flex-1 bg-[#E6E8F0]" />
+              <span>or</span>
+              <span className="h-px flex-1 bg-[#E6E8F0]" />
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
@@ -119,28 +114,17 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={isGoogleLoading}
-                className={buttonStyles({ variant: "secondary", size: "lg", className: "w-full" })}
-              >
-                {isGoogleLoading ? "Redirecting to Google..." : "Continue with Google"}
-              </button>
-              <Link to="/reset-password" className="block text-center text-sm font-medium text-blue-600 transition hover:text-blue-700">
-                Forgot your password?
-              </Link>
-            </div>
-
-            <p className="text-center text-sm text-slate-500">
-              Need an account?{" "}
-              <Link to={withNextPath("/signup", nextPath)} className="font-semibold text-blue-600 hover:text-blue-700">
-                Sign up
-              </Link>
-            </p>
+            <Link to="/reset-password" className="block text-center text-sm font-medium text-[#312E81] transition hover:text-[#4338CA]">
+              Forgot password?
+            </Link>
           </div>
         </Card>
+        <p className="mt-6 text-center text-sm text-slate-500">
+          Need an account?{" "}
+          <Link to={withNextPath("/signup", nextPath)} className="font-semibold text-[#312E81] hover:text-[#4338CA]">
+            Sign up
+          </Link>
+        </p>
       </div>
     </div>
   );

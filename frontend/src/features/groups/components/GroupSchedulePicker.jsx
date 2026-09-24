@@ -1,22 +1,29 @@
-import { Field, Select } from "../../../components/ui.jsx";
+import { DropdownSelector } from "../../../components/ui.jsx";
 import { formatScheduleLabel, getScheduleKey, groupSchedulesByYear } from "../../../utils/classMatch.js";
 
 export default function GroupSchedulePicker({ schedules, selectedKey, onChange }) {
   const groups = groupSchedulesByYear(schedules);
+  const options = groups.flatMap((group) => group.items.map((schedule) => ({
+    value: getScheduleKey(schedule),
+    label: formatScheduleLabel(schedule),
+    description: "Updates the classmate matches below",
+    meta: `${schedule.class_count} classes`,
+    group: group.year,
+  })));
 
   return (
-    <Field label="Schedule">
-      <Select value={selectedKey} onChange={(event) => onChange(event.target.value)}>
-        {groups.map((group) => (
-          <optgroup key={group.year} label={String(group.year)}>
-            {group.items.map((schedule) => (
-              <option key={getScheduleKey(schedule)} value={getScheduleKey(schedule)}>
-                {formatScheduleLabel(schedule)} - {schedule.class_count} classes
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </Select>
-    </Field>
+    <section aria-label="Choose a schedule for comparison" className="space-y-3">
+      <div>
+        <div className="text-sm font-semibold text-slate-800">Compare a schedule</div>
+        <div className="mt-1 text-sm text-slate-500">Choose which term to compare with this group.</div>
+      </div>
+      <DropdownSelector
+        label="Compare a schedule"
+        value={selectedKey}
+        options={options}
+        onChange={onChange}
+        placeholder="Choose a schedule"
+      />
+    </section>
   );
 }

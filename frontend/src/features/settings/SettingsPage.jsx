@@ -30,6 +30,7 @@ export default function SettingsPage() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     if (error) {
@@ -132,13 +133,24 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleLogout() {
+    try {
+      setIsLoggingOut(true);
+      await logout();
+      navigate("/login", { replace: true });
+    } catch (logoutError) {
+      setError(logoutError instanceof Error ? logoutError.message : "Unable to sign out");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }
+
   return (
     <div className="motion-fade-up space-y-6">
       <PageHeader
-        eyebrow="Profile"
-        title="Profile & settings"
-        description="Keep your profile current, update your password, and manage account-level settings from one place."
-        actions={<Button onClick={() => setIsEditOpen(true)}>Edit profile</Button>}
+        eyebrow="Account"
+        title="Settings"
+        description="Manage your profile, security, and account access."
       />
 
       {isLoading ? (
@@ -150,10 +162,11 @@ export default function SettingsPage() {
           action={<Button onClick={refreshProfile}>Try again</Button>}
         />
       ) : (
-        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="mx-auto max-w-4xl space-y-6">
           <Card className="motion-fade-up motion-delay-1 space-y-6">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-              <Avatar src={profile?.avatar_url} name={profile?.name} size="xl" />
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-center">
+              <Avatar src={profile?.avatar_url} name={profile?.name} size="xl" className="!rounded-full" />
               <div className="space-y-3">
                 <div>
                   <div className="text-2xl font-semibold tracking-tight text-slate-900">{profile?.name}</div>
@@ -171,9 +184,13 @@ export default function SettingsPage() {
                   ) : null}
                 </div>
               </div>
+              </div>
+              <Button variant="secondary" onClick={() => setIsEditOpen(true)} className="shrink-0">
+                Edit profile
+              </Button>
             </div>
 
-            <div className="rounded-[28px] bg-slate-100 p-5">
+            <div className="border-t border-[#E6E8F0] pt-6">
               <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Bio</div>
               <p className="mt-3 text-sm leading-7 text-slate-600">
                 {profile?.bio || "Add a short bio so classmates know what you're studying or what you're interested in."}
@@ -181,25 +198,42 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          <div className="space-y-6">
-            <Card className="motion-fade-up motion-delay-1 space-y-5">
-              <Button variant="secondary" onClick={() => setIsResetPasswordOpen(true)} className="w-full">
-                Reset password
-              </Button>
-            </Card>
-
-            <Card className="motion-fade-up motion-delay-2 space-y-4 border-rose-100">
+          <Card className="motion-fade-up motion-delay-2">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <div className="text-lg font-semibold text-slate-900">Delete account</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Security</div>
+                <div className="mt-3 text-lg font-semibold text-slate-900">Password</div>
+                <div className="mt-1 text-sm text-slate-500">Update your password to keep your account secure.</div>
+              </div>
+              <Button variant="secondary" onClick={() => setIsResetPasswordOpen(true)} className="shrink-0">
+                Change password
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="motion-fade-up motion-delay-3 space-y-6">
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Account actions</div>
+            <div className="flex flex-col gap-4 border-b border-[#E6E8F0] pb-6 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-base font-semibold text-slate-900">Sign out</div>
+                <div className="mt-1 text-sm text-slate-500">Sign out of ClassMatch on this device.</div>
+              </div>
+              <Button variant="secondary" onClick={handleLogout} disabled={isLoggingOut} className="shrink-0">
+                {isLoggingOut ? "Signing out..." : "Sign out"}
+              </Button>
+            </div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-base font-semibold text-rose-700">Delete account</div>
                 <div className="mt-1 text-sm text-slate-500">
-                  This removes your schedules, memberships, and account record permanently.
+                  This permanently removes your schedules, memberships, and account record.
                 </div>
               </div>
-              <Button variant="danger" onClick={() => setIsDeleteOpen(true)} className="w-full">
+              <Button variant="danger" onClick={() => setIsDeleteOpen(true)} className="shrink-0">
                 Delete account
               </Button>
-            </Card>
-          </div>
+            </div>
+          </Card>
         </div>
       )}
 

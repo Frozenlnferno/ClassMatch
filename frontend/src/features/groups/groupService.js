@@ -82,31 +82,6 @@ export async function createGroup(groupData) {
 }
 
 /**
- * Join a group using join code
- * @param {string} joinCode - The join code for the group
- * @returns {Promise<object>} Success response
- */
-export async function joinGroup(joinCode) {
-    const token = await getToken();
-
-    const response = await fetch(`${API_ROUTES.groups}/join`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ join_code: joinCode }),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to join group: ${response.status}`);
-    }
-
-    return await response.json();
-}
-
-/**
  * Leave a group
  * @param {string} groupId - ID of the group to leave
  * @returns {Promise<object>} Success response
@@ -289,10 +264,10 @@ export async function getPastClassmates(groupId, year, term) {
     return await response.json();
 }
 
-export async function joinGroupByInviteCodeURL(inviteCode) {
+export async function joinGroupByInviteLink(inviteToken) {
     const token = await getToken();
 
-    const response = await fetch(`${API_ROUTES.groups}/join/${encodeURIComponent(inviteCode)}`, {
+    const response = await fetch(`${API_ROUTES.groups}/join/${encodeURIComponent(inviteToken)}`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`,

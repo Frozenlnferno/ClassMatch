@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { createGroup, getUserGroups, joinGroup } from "./groupService.js";
+import { useNavigate } from "react-router-dom";
+import { createGroup, getUserGroups } from "./groupService.js";
 import {
   Avatar,
   Badge,
@@ -9,9 +9,8 @@ import {
   EmptyState,
   PageHeader,
 } from "../../components/ui.jsx";
-import { ArrowRightIcon, PlusIcon, UsersIcon } from "../../components/icons.jsx";
+import { PlusIcon } from "../../components/icons.jsx";
 import CreateGroupModal from "./components/CreateGroupModal.jsx";
-import JoinGroupModal from "./components/JoinGroupModal.jsx";
 import { useNotifications } from "../../contexts/NotificationsContext.jsx";
 
 export default function MyGroupsPage() {
@@ -21,8 +20,6 @@ export default function MyGroupsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isJoining, setIsJoining] = useState(false);
-  const [isJoinOpen, setIsJoinOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -69,26 +66,6 @@ export default function MyGroupsPage() {
     }
   }
 
-  async function handleJoinGroup(nextJoinCode) {
-    try {
-      setIsJoining(true);
-      setError("");
-      setSuccess("");
-      const response = await joinGroup(nextJoinCode.trim());
-      setIsJoinOpen(false);
-      notifySuccess(
-        response.already_member ? "Already in group" : "Group joined",
-        response.already_member ? "Opening the group you already belong to." : "Taking you to your new group.",
-      );
-      navigate(`/groups/${response.group_id}`, { replace: true });
-    } catch (joinError) {
-      setError(joinError instanceof Error ? joinError.message : "Unable to join group");
-      throw joinError;
-    } finally {
-      setIsJoining(false);
-    }
-  }
-
   function openGroup(groupId) {
     navigate(`/groups/${groupId}`);
   }
@@ -98,18 +75,12 @@ export default function MyGroupsPage() {
       <PageHeader
         eyebrow="Groups"
         title="Your Groups"
-        description="Create a new group, join by invite code, or jump back into the spaces you already share with classmates."
+        description="Create a new group or jump back into the spaces you already share with classmates."
         actions={(
-          <>
-            <Button variant="secondary" onClick={() => setIsJoinOpen(true)}>
-              <UsersIcon className="size-4" />
-              Join group
-            </Button>
-            <Button onClick={() => setIsCreateOpen(true)}>
-              <PlusIcon className="size-4" />
-              Create group
-            </Button>
-          </>
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <PlusIcon className="size-4" />
+            Create group
+          </Button>
         )}
       />
 
@@ -117,13 +88,13 @@ export default function MyGroupsPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-sm font-semibold text-slate-900">All groups</div>
-            <div className="mt-1 text-sm text-slate-500">Each card includes your role, member count, and a sharable invite link.</div>
+            <div className="mt-1 text-sm text-slate-500">Quickly scan your groups, their purpose, and your membership details.</div>
           </div>
           <Badge tone="blue">{groups.length} total</Badge>
         </div>
 
         {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 4 }).map((_, index) => (
               <div key={index} className="h-48 rounded-[28px] bg-slate-100" />
             ))}
@@ -135,7 +106,7 @@ export default function MyGroupsPage() {
             action={<Button onClick={refreshGroups}>Try again</Button>}
           />
         ) : groups.length ? (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {groups.map((group) => (
               <Card
                 key={group.id}
@@ -150,36 +121,26 @@ export default function MyGroupsPage() {
                   }
                 }}
               >
-                <div className="flex h-full flex-col justify-between gap-5">
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between gap-4">
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4">
                       <Avatar src={group.group_icon_url} name={group.name} size="lg" />
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <Badge tone="neutral">{group.role}</Badge>
-                        <Badge tone={group.joinable ? "emerald" : "amber"}>
-                          {group.joinable ? "Open" : "Closed"}
-                        </Badge>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-lg font-semibold text-slate-900">{group.name}</div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Badge tone="neutral">{group.role}</Badge>
+                          <Badge tone={group.joinable ? "emerald" : "amber"}>
+                            {group.joinable ? "Open" : "Closed"}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-lg font-semibold text-slate-900">{group.name}</div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="inline-flex whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                          {group.member_count} members
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Link
-                      to={`/groups/${group.id}`}
-                      onClick={(event) => event.stopPropagation()}
-                      className="motion-soft inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
-                    >
-                      Open group
-                      <ArrowRightIcon className="size-4" />
-                    </Link>
+                  <p className="line-clamp-2 min-h-10 text-sm leading-5 text-slate-500">
+                    {group.description || "No group description yet."}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                    <span className="inline-flex whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                      {group.member_count} members
+                    </span>
                   </div>
                 </div>
               </Card>
@@ -188,18 +149,12 @@ export default function MyGroupsPage() {
         ) : (
           <EmptyState
             title="No groups yet"
-            description="Create your first group or join one with an invite code to start connecting course overlap with people you know."
+            description="Create your first group to start connecting course overlap with people you know."
             action={(
-              <div className="flex flex-wrap justify-center gap-3">
-                <Button variant="secondary" onClick={() => setIsJoinOpen(true)}>
-                  <UsersIcon className="size-4" />
-                  Join group
-                </Button>
-                <Button onClick={() => setIsCreateOpen(true)}>
-                  <PlusIcon className="size-4" />
-                  Create a group
-                </Button>
-              </div>
+              <Button onClick={() => setIsCreateOpen(true)}>
+                <PlusIcon className="size-4" />
+                Create a group
+              </Button>
             )}
           />
         )}
@@ -210,12 +165,6 @@ export default function MyGroupsPage() {
         onClose={() => setIsCreateOpen(false)}
         onSubmit={handleCreateGroup}
         isSubmitting={isCreating}
-      />
-      <JoinGroupModal
-        isOpen={isJoinOpen}
-        onClose={() => setIsJoinOpen(false)}
-        onSubmit={handleJoinGroup}
-        isSubmitting={isJoining}
       />
     </div>
   );

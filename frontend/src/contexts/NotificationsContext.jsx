@@ -26,10 +26,10 @@ function NotificationStack({ notifications, onDismiss }) {
       close: "bg-white/14 text-rose-50 hover:bg-white/22 hover:text-white",
     },
     info: {
-      shell: "border-blue-500/70 bg-blue-600 text-white",
+      shell: "border-indigo-500/70 bg-[#312E81] text-white",
       pill: "bg-white/18 text-white",
-      message: "text-blue-50",
-      close: "bg-white/14 text-blue-50 hover:bg-white/22 hover:text-white",
+      message: "text-indigo-50",
+      close: "bg-white/14 text-indigo-50 hover:bg-white/22 hover:text-white",
     },
     warning: {
       shell: "border-amber-500/70 bg-amber-500 text-white",

@@ -3,11 +3,11 @@ import {
   Banner,
   Button,
   Card,
+  DropdownSelector,
   Field,
   Input,
   Modal,
   ProgressBar,
-  Select,
 } from "../../../components/ui.jsx";
 import { PlusIcon } from "../../../components/icons.jsx";
 import {
@@ -171,7 +171,7 @@ export default function CreateScheduleModal({
               onClick={() => setMethod("ics")}
               className={[
                 "motion-lift rounded-[24px] border p-5 text-left transition-[transform,border-color,background-color,box-shadow] duration-200",
-                method === "ics" ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-slate-50 hover:border-blue-200",
+                method === "ics" ? "border-indigo-300 bg-indigo-50" : "border-[#E6E8F0] bg-slate-50 hover:border-cyan-300",
               ].join(" ")}
             >
               <div className="text-sm font-semibold text-slate-900">ICS upload</div>
@@ -185,7 +185,7 @@ export default function CreateScheduleModal({
               onClick={() => setMethod("crn")}
               className={[
                 "motion-lift rounded-[24px] border p-5 text-left transition-[transform,border-color,background-color,box-shadow] duration-200",
-                method === "crn" ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-slate-50 hover:border-blue-200",
+                method === "crn" ? "border-indigo-300 bg-indigo-50" : "border-[#E6E8F0] bg-slate-50 hover:border-cyan-300",
               ].join(" ")}
             >
               <div className="text-sm font-semibold text-slate-900">CRN entry</div>
@@ -228,40 +228,38 @@ export default function CreateScheduleModal({
                 type="file"
                 accept=".ics,text/calendar"
                 onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
-                className="block w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600 file:mr-4 file:rounded-xl file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
+                className="block w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600 file:mr-4 file:rounded-xl file:border-0 file:bg-[#312E81] file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
               />
             </Field>
 
           </div>
         ) : (
           <div className="space-y-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Year">
-                <Select
+            <div className="space-y-5 rounded-[24px] border border-[#E6E8F0] bg-slate-50/70 p-4">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Academic term</div>
+                <div className="mt-1 text-sm text-slate-500">Choose when these classes are offered.</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Year</div>
+                <DropdownSelector
+                  label="Academic year"
                   value={form.year}
+                  options={getYearOptions().map((year) => ({ value: year, label: String(year) }))}
+                  onChange={(year) => setForm((current) => ({ ...current, year: Number(year) }))}
                   disabled={Boolean(fixedSchedule)}
-                  onChange={(event) => setForm((current) => ({ ...current, year: Number(event.target.value) }))}
-                >
-                  {getYearOptions().map((year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Term">
-                <Select
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Term</div>
+                <DropdownSelector
+                  label="Academic term"
                   value={form.term}
+                  options={TERM_OPTIONS.map((term) => ({ value: term.value, label: term.label }))}
+                  onChange={(term) => setForm((current) => ({ ...current, term }))}
                   disabled={Boolean(fixedSchedule)}
-                  onChange={(event) => setForm((current) => ({ ...current, term: event.target.value }))}
-                >
-                  {TERM_OPTIONS.map((term) => (
-                    <option key={term.value} value={term.value}>
-                      {term.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+                />
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -305,7 +303,7 @@ export default function CreateScheduleModal({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold text-slate-900">{phaseLabel}</div>
-                <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                <span className="inline-flex rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
                   {phaseToneLabel}
                 </span>
               </div>

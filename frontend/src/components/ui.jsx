@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useEffect } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CloseIcon } from "./icons.jsx";
+import { ChevronDownIcon, CloseIcon } from "./icons.jsx";
 import { getInitials } from "../utils/classMatch.js";
 
 function cn(...classes) {
@@ -10,10 +10,10 @@ function cn(...classes) {
 
 export function buttonStyles({ variant = "primary", size = "md", className = "" } = {}) {
   const variantStyles = {
-    primary: "bg-blue-600 !text-white shadow-[0_18px_34px_-20px_rgba(37,99,235,0.9)] hover:bg-blue-500 hover:!text-white",
-    secondary: "bg-white text-slate-800 border border-slate-200 shadow-sm hover:border-blue-200 hover:bg-blue-50/60",
+    primary: "bg-[#312E81] !text-white shadow-[0_18px_34px_-20px_rgba(49,46,129,0.9)] hover:bg-[#4338CA] hover:!text-white",
+    secondary: "bg-white text-[#161A2D] border border-[#E6E8F0] shadow-sm hover:border-[#06B6D4] hover:bg-cyan-50/60",
     ghost: "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-    danger: "bg-rose-600 !text-white shadow-[0_18px_34px_-20px_rgba(225,29,72,0.9)] hover:bg-rose-500 hover:!text-white",
+    danger: "bg-[#E11D48] !text-white shadow-[0_18px_34px_-20px_rgba(225,29,72,0.9)] hover:bg-rose-500 hover:!text-white",
   };
   const sizeStyles = {
     sm: "px-3 py-2 text-sm",
@@ -37,7 +37,7 @@ export function Card({ className, children, ...props }) {
   return (
     <div
       className={cn(
-        "motion-soft rounded-[28px] border border-white/80 bg-white/90 p-6 shadow-[0_22px_60px_-30px_rgba(15,23,42,0.18)] backdrop-blur",
+        "motion-soft rounded-[28px] border border-[#E6E8F0] bg-white/90 p-6 shadow-[0_22px_60px_-30px_rgba(15,23,42,0.18)] backdrop-blur",
         className,
       )}
       {...props}
@@ -61,7 +61,7 @@ export function Field({ label, hint, error, children, className = "" }) {
 }
 
 const fieldBaseClass =
-  "motion-soft w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-900 shadow-inner shadow-white transition-[background-color,border-color,box-shadow,color,transform] duration-200 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100";
+  "motion-soft w-full rounded-2xl border border-[#E6E8F0] bg-slate-50/80 px-4 py-3 text-sm text-[#161A2D] shadow-inner shadow-white transition-[background-color,border-color,box-shadow,color,transform] duration-200 outline-none placeholder:text-slate-400 focus:border-[#06B6D4] focus:bg-white focus:ring-4 focus:ring-cyan-100";
 
 export function Input({ className, ...props }) {
   return <input className={cn(fieldBaseClass, className)} {...props} />;
@@ -71,17 +71,134 @@ export function TextArea({ className, rows = 4, ...props }) {
   return <textarea rows={rows} className={cn(fieldBaseClass, "resize-none", className)} {...props} />;
 }
 
-export function Select({ className, children, ...props }) {
+export function DropdownSelector({
+  label,
+  value,
+  options,
+  onChange,
+  placeholder = "Select an option",
+  disabled = false,
+  className = "",
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const listboxId = `dropdown-${useId().replace(/:/g, "")}`;
+  const selectedOption = options.find((option) => String(option.value) === String(value));
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    function handlePointerDown(event) {
+      if (!containerRef.current?.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  function handleSelect(option) {
+    onChange(option.value);
+    setIsOpen(false);
+    triggerRef.current?.focus();
+  }
+
   return (
-    <select className={cn(fieldBaseClass, "appearance-none", className)} {...props}>
-      {children}
-    </select>
+    <div ref={containerRef} className={cn("relative", className)}>
+      <button
+        ref={triggerRef}
+        type="button"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls={listboxId}
+        aria-label={label}
+        onClick={() => setIsOpen((current) => !current)}
+        onKeyDown={(event) => {
+          if ((event.key === "ArrowDown" || event.key === "ArrowUp") && !isOpen) {
+            event.preventDefault();
+            setIsOpen(true);
+          }
+        }}
+        className={cn(
+          "flex w-full items-center justify-between gap-4 border bg-white px-4 py-3 text-left transition-[border-color,border-radius,background-color,box-shadow] duration-200 outline-none focus:border-[#06B6D4] focus:ring-4 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:opacity-60",
+          isOpen
+            ? "rounded-t-2xl border-[#312E81] border-b-[#E6E8F0] shadow-sm"
+            : "rounded-2xl border-[#E6E8F0] hover:border-cyan-300",
+        )}
+      >
+        <span className="min-w-0">
+          <span className={cn("block truncate text-sm font-semibold", selectedOption ? "text-[#161A2D]" : "text-slate-400")}>
+            {selectedOption?.label || placeholder}
+          </span>
+          {selectedOption?.description ? <span className="mt-1 block truncate text-xs text-slate-500">{selectedOption.description}</span> : null}
+        </span>
+        <span className="flex shrink-0 items-center gap-3">
+          {selectedOption?.meta ? <span className="text-xs font-semibold text-[#312E81]">{selectedOption.meta}</span> : null}
+          <ChevronDownIcon className={cn("size-4 text-slate-500 transition-transform duration-200", isOpen && "rotate-180")} />
+        </span>
+      </button>
+
+      {isOpen ? (
+        <div
+          id={listboxId}
+          role="listbox"
+          aria-label={label}
+          className="absolute z-30 max-h-80 w-full overflow-y-auto rounded-b-2xl border border-t-0 border-[#312E81] bg-white py-1 shadow-[0_22px_40px_-24px_rgba(15,23,42,0.45)]"
+        >
+          {options.map((option, index) => {
+            const isSelected = String(option.value) === String(value);
+            const startsGroup = option.group && option.group !== options[index - 1]?.group;
+
+            return (
+              <div key={String(option.value)}>
+                {startsGroup ? (
+                  <div className="px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    {option.group}
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => handleSelect(option)}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors duration-150 focus:bg-cyan-50 focus:outline-none",
+                    isSelected ? "bg-indigo-50 text-[#312E81]" : "text-slate-700 hover:bg-cyan-50/70",
+                  )}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold">{option.label}</span>
+                    {option.description ? <span className="mt-1 block truncate text-xs text-slate-500">{option.description}</span> : null}
+                  </span>
+                  {option.meta ? <span className="shrink-0 text-xs font-semibold text-[#312E81]">{option.meta}</span> : null}
+                </button>
+                {index < options.length - 1 ? <div className="mx-4 h-px bg-slate-200/80" aria-hidden="true" /> : null}
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
 export function Banner({ title, children, tone = "info" }) {
   const tones = {
-    info: "border-blue-100 bg-blue-50 text-blue-900",
+    info: "border-indigo-100 bg-indigo-50 text-indigo-900",
     danger: "border-rose-100 bg-rose-50 text-rose-900",
     success: "border-emerald-100 bg-emerald-50 text-emerald-900",
     warning: "border-amber-100 bg-amber-50 text-amber-900",
@@ -98,7 +215,7 @@ export function Banner({ title, children, tone = "info" }) {
 export function Badge({ children, tone = "neutral" }) {
   const tones = {
     neutral: "bg-slate-100 text-slate-700",
-    blue: "bg-blue-100 text-blue-700",
+    blue: "bg-indigo-100 text-indigo-700",
     emerald: "bg-emerald-100 text-emerald-700",
     amber: "bg-amber-100 text-amber-700",
     rose: "bg-rose-100 text-rose-700",
@@ -111,7 +228,7 @@ export function PageHeader({ eyebrow, title, description, actions }) {
   return (
     <div className="motion-fade-up mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="space-y-2">
-        {eyebrow ? <div className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">{eyebrow}</div> : null}
+        {eyebrow ? <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#312E81]">{eyebrow}</div> : null}
         <div className="space-y-1">
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">{title}</h1>
           {description ? <p className="max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">{description}</p> : null}
@@ -137,7 +254,7 @@ export function EmptyState({ title, description, action, className = "" }) {
 export function LoadingState({ title = "Loading", description = "Pulling in the latest details for you.", compact = false }) {
   return (
     <div className={cn("flex flex-col items-center justify-center gap-3 text-center", compact ? "py-3" : "rounded-[28px] border border-white/80 bg-white/90 px-6 py-10 shadow-sm")}>
-      <div className="size-9 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+      <div className="size-9 animate-spin rounded-full border-4 border-indigo-100 border-t-[#312E81]" />
       <div className="space-y-1">
         <div className="text-sm font-semibold text-slate-900">{title}</div>
         {!compact ? <div className="text-sm text-slate-500">{description}</div> : null}
@@ -160,8 +277,34 @@ export function Avatar({ src, name, size = "md", className = "" }) {
   }
 
   return (
-    <div className={cn("motion-soft flex items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-sky-400 font-semibold text-white", sizes[size], className)}>
+    <div className={cn("motion-soft flex items-center justify-center rounded-2xl bg-gradient-to-br from-[#312E81] to-[#06B6D4] font-semibold text-white", sizes[size], className)}>
       {getInitials(name)}
+    </div>
+  );
+}
+
+export function AvatarStack({ people = [], max = 4, size = "sm", label = "People" }) {
+  const visiblePeople = people.slice(0, max);
+  const remainingCount = Math.max(0, people.length - visiblePeople.length);
+
+  if (!people.length) return <span className="text-sm text-slate-500">No matches yet</span>;
+
+  return (
+    <div className="flex items-center pl-2" aria-label={`${people.length} ${label.toLowerCase()}`}>
+      {visiblePeople.map((person, index) => (
+        <Avatar
+          key={person.member_id || person.user_id || `${person.member_name || person.name}-${index}`}
+          src={person.avatar_url || person.member_avatar_url}
+          name={person.member_name || person.name}
+          size={size}
+          className={cn("ring-2 ring-white", index > 0 ? "-ml-2" : "")}
+        />
+      ))}
+      {remainingCount ? (
+        <span className="-ml-2 flex size-10 items-center justify-center rounded-2xl bg-[#312E81] text-xs font-semibold text-white ring-2 ring-white">
+          +{remainingCount}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -180,7 +323,7 @@ export function ProgressBar({ value = 0, label }) {
     <div className="space-y-2">
       {label ? <div className="flex items-center justify-between text-xs font-medium text-slate-500"><span>{label}</span><span>{Math.round(value)}%</span></div> : null}
       <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-        <div className="motion-soft h-full rounded-full bg-blue-600 transition-[width,transform,background-color] duration-300" style={{ width: `${value}%` }} />
+        <div className="motion-soft h-full rounded-full bg-[#312E81] transition-[width,transform,background-color] duration-300" style={{ width: `${value}%` }} />
       </div>
     </div>
   );
@@ -193,13 +336,13 @@ export function Toggle({ checked, onChange, onLabel = "Open", offLabel = "Closed
       onClick={() => onChange(!checked)}
       className={cn(
         "motion-soft inline-flex items-center gap-3 rounded-full border px-2 py-2 text-sm font-medium",
-        checked ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 bg-slate-50 text-slate-600",
+        checked ? "border-indigo-200 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-slate-50 text-slate-600",
       )}
     >
       <span
         className={cn(
           "motion-soft flex h-7 w-12 items-center rounded-full px-1",
-          checked ? "bg-blue-600 justify-end" : "bg-slate-300 justify-start",
+          checked ? "bg-[#312E81] justify-end" : "bg-slate-300 justify-start",
         )}
       >
         <span className="motion-soft size-5 rounded-full bg-white shadow-sm" />

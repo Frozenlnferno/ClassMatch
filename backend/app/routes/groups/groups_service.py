@@ -397,6 +397,7 @@ def get_group_details(uid, group_id):
                     g.description,
                     g.joinable,
                     g.group_icon_url,
+                    g.created_at,
                     gm.role,
                     (
                         SELECT COUNT(*)
@@ -423,8 +424,9 @@ def get_group_details(uid, group_id):
         "description": row[2],
         "joinable": row[3],
         "group_icon_url": row[4],
-        "my_role": row[5],
-        "member_count": row[6],
+        "created_at": row[5].isoformat().replace("+00:00", "Z") if row[5] else None,
+        "my_role": row[6],
+        "member_count": row[7],
     }
 
 

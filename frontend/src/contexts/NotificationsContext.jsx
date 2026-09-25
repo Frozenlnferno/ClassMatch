@@ -26,7 +26,7 @@ function NotificationStack({ notifications, onDismiss }) {
       close: "bg-white/14 text-rose-50 hover:bg-white/22 hover:text-white",
     },
     info: {
-      shell: "border-indigo-500/70 bg-[#312E81] text-white",
+      shell: "border-indigo-500/70 bg-[var(--color-primary)] text-white",
       pill: "bg-white/18 text-white",
       message: "text-indigo-50",
       close: "bg-white/14 text-indigo-50 hover:bg-white/22 hover:text-white",
@@ -49,7 +49,7 @@ function NotificationStack({ notifications, onDismiss }) {
               key={notification.id}
               role={notification.tone === "danger" ? "alert" : "status"}
               aria-live={notification.tone === "danger" ? "assertive" : "polite"}
-              className={`motion-scale-in pointer-events-auto overflow-hidden rounded-[28px] border p-3 shadow-[0_22px_60px_-28px_rgba(15,23,42,0.35)] backdrop-blur ${tone.shell}`}
+              className={`motion-scale-in pointer-events-auto overflow-hidden rounded-[28px] border p-3 shadow-[0_22px_60px_-28px_var(--color-shadow)] backdrop-blur ${tone.shell}`}
             >
               <div className="flex items-center gap-4">
                 <div className={`mt-0.5 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${tone.pill}`}>

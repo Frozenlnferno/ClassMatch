@@ -4,7 +4,7 @@ import {
   Card,
   Modal,
 } from "../../../components/ui.jsx";
-import { formatCourseCode, formatScheduleLabel, formatTimeRange } from "../../../utils/classMatch.js";
+import { formatCourseCode, formatRole, formatScheduleLabel, formatTimeRange } from "../../../utils/classMatch.js";
 
 export default function ClassDetailsModal({ course, isOpen, onClose }) {
   return (
@@ -47,7 +47,7 @@ export default function ClassDetailsModal({ course, isOpen, onClose }) {
                     <Avatar src={match.avatar_url} name={match.member_name} size="sm" />
                     <div>
                       <div className="text-sm font-semibold text-slate-900">{match.member_name}</div>
-                      <div className="text-xs text-slate-500">{match.role || "Member"}</div>
+                      <div className="text-xs text-slate-500">{formatRole(match.role)}</div>
                     </div>
                   </div>
                 )) : (

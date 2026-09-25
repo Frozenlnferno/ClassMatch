@@ -7,10 +7,10 @@ export default function CourseCard({ course, isSelected, onToggle }) {
       type="button"
       onClick={() => onToggle(course)}
       className={[
-        "motion-lift w-full rounded-[28px] border p-5 text-left transition-[transform,border-color,background-color,box-shadow] duration-200",
+        "motion-lift w-full rounded-[var(--radius-card)] border p-5 text-left transition-[transform,border-color,background-color,box-shadow] duration-200",
         isSelected
-          ? "border-indigo-300 bg-indigo-50/80 shadow-[0_20px_45px_-32px_rgba(49,46,129,0.6)]"
-          : "border-[#E6E8F0] bg-white hover:border-cyan-300 hover:bg-cyan-50/40",
+          ? "border-indigo-300 bg-indigo-50/80 shadow-[0_20px_45px_-32px_var(--color-shadow)]"
+          : "border-[var(--color-border)] !bg-[var(--color-surface-level-2)] hover:border-cyan-300 hover:!bg-[var(--color-surface-secondary)]",
       ].join(" ")}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">

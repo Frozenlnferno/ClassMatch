@@ -32,6 +32,7 @@ import {
   canManageMember,
   copyText,
   formatCourseCode,
+  formatRole,
   formatScheduleLabel,
   formatTimeRange,
   getMostRecentSchedule,
@@ -264,7 +265,7 @@ export default function GroupDetailPage() {
       setSuccess("");
       await changeMemberRole(groupId, member.user_id, newRole);
       await refreshWorkspace(selectedKey);
-      setSuccess(`${member.name} is now ${newRole}.`);
+      setSuccess(`${member.name} is now ${formatRole(newRole)}.`);
     } catch (roleError) {
       setError(roleError instanceof Error ? roleError.message : "Unable to change role");
     } finally {
@@ -344,7 +345,7 @@ export default function GroupDetailPage() {
   return (
     <div className="motion-fade-up space-y-6">
       <Card className="motion-fade-up motion-delay-1 space-y-5">
-        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#312E81]">Group details</div>
+        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--color-primary)]">Group details</div>
 
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
@@ -377,25 +378,25 @@ export default function GroupDetailPage() {
                   •••
                 </Button>
                 {isGroupActionsOpen ? (
-                  <div className="motion-scale-in absolute right-0 top-[calc(100%+0.5rem)] z-20 w-48 rounded-2xl border border-[#E6E8F0] bg-white p-2 shadow-lg">
+                  <div className="motion-scale-in absolute right-0 top-[calc(100%+0.5rem)] z-20 w-48 rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-lg">
                     <button
                       type="button"
                       onClick={() => {
                         setIsGroupActionsOpen(false);
                         setIsEditOpen(true);
                       }}
-                      className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                      className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:!bg-[var(--color-card-hover)]"
                     >
                       Edit group
                     </button>
-                    <div className="my-2 border-t border-[#E6E8F0]" />
+                    <div className="my-2 border-t border-[var(--color-border)]" />
                     <button
                       type="button"
                       onClick={() => {
                         setIsGroupActionsOpen(false);
                         setIsLeaveOpen(true);
                       }}
-                      className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50"
+                      className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-rose-600 transition hover:!bg-[var(--color-card-hover)]"
                     >
                       Leave group
                     </button>
@@ -406,7 +407,7 @@ export default function GroupDetailPage() {
           </div>
         </div>
 
-        <div className="border-t border-[#E6E8F0] pt-5">
+        <div className="border-t border-[var(--color-border)] pt-5">
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Group bio</div>
           <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
             {displayedBio}
@@ -415,7 +416,7 @@ export default function GroupDetailPage() {
             <button
               type="button"
               onClick={() => setIsBioExpanded((current) => !current)}
-              className="mt-3 w-fit text-sm font-semibold text-[#312E81] transition hover:text-[#4338CA]"
+              className="mt-3 w-fit text-sm font-semibold text-[var(--color-primary)] transition hover:text-[var(--color-primary-hover)]"
             >
               {isBioExpanded ? "Show less" : "See all"}
             </button>
@@ -453,7 +454,7 @@ export default function GroupDetailPage() {
                     }
                   }}
                   className={[
-                    "motion-lift w-full rounded-[28px] border border-[#E6E8F0] bg-slate-50/70 p-4 text-left transition-[transform,border-color,background-color,box-shadow] duration-200 hover:border-cyan-300 hover:bg-cyan-50/40",
+                    "motion-lift w-full rounded-[var(--radius-card)] border border-[var(--color-border)] bg-slate-50/70 p-4 text-left transition-[transform,border-color,background-color,box-shadow] duration-200 hover:border-cyan-300 hover:bg-cyan-50/40",
                     index >= 5 && !areAllMembersVisible ? "hidden sm:block" : "",
                   ].filter(Boolean).join(" ")}
                 >
@@ -468,7 +469,7 @@ export default function GroupDetailPage() {
                       <div className="min-w-0">
                         <div className="truncate text-sm font-semibold text-slate-900">{member.name}</div>
                         <div className="mt-1 text-xs text-slate-500">
-                          {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                          {formatRole(member.role)}
                         </div>
                       </div>
                     </div>
@@ -524,7 +525,7 @@ export default function GroupDetailPage() {
                 type="button"
                 aria-expanded={areAllMembersVisible}
                 onClick={() => setAreAllMembersVisible((current) => !current)}
-                className="motion-lift w-full rounded-2xl border border-[#E6E8F0] bg-white px-4 py-3 text-sm font-semibold text-[#312E81] transition-[transform,border-color,background-color] duration-200 hover:border-cyan-300 hover:bg-cyan-50/60 sm:hidden"
+                className="motion-lift w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--color-primary)] transition-[transform,border-color,background-color] duration-200 hover:border-cyan-300 hover:bg-cyan-50/60 sm:hidden"
               >
                 {areAllMembersVisible ? "Show fewer members" : `See all members (${members.length})`}
               </button>
@@ -564,7 +565,7 @@ export default function GroupDetailPage() {
                     key={`${course.sectionId}-${course.crn}`}
                     type="button"
                     onClick={() => setSelectedCourse(course)}
-                    className="motion-lift w-full rounded-[28px] border border-[#E6E8F0] bg-white p-5 text-left transition-[transform,border-color,background-color,box-shadow] duration-200 hover:border-cyan-300 hover:bg-cyan-50/30"
+                    className="motion-lift w-full rounded-[var(--radius-card)] border border-[var(--color-border)] !bg-[var(--color-surface-level-2)] p-5 text-left transition-[transform,border-color,background-color,box-shadow] duration-200 hover:border-cyan-300 hover:!bg-[var(--color-surface-secondary)]"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>

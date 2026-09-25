@@ -6,7 +6,6 @@ export default function GroupSchedulePicker({ schedules, selectedKey, onChange }
   const options = groups.flatMap((group) => group.items.map((schedule) => ({
     value: getScheduleKey(schedule),
     label: formatScheduleLabel(schedule),
-    description: "Updates the classmate matches below",
     meta: `${schedule.class_count} classes`,
     group: group.year,
   })));

@@ -55,7 +55,7 @@ export default function ResetPasswordPage() {
       <Card className="motion-fade-up w-full p-8 sm:p-10">
         <div className="space-y-6">
           <Link to="/" className="inline-flex items-center gap-3">
-            <LogoMark className="size-10 text-[#312E81]" />
+            <LogoMark className="size-10 text-[var(--color-primary)]" />
             <div>
               <div className="text-base font-semibold text-slate-900">ClassMatch</div>
               <div className="text-sm text-slate-500">Password recovery</div>
@@ -63,7 +63,7 @@ export default function ResetPasswordPage() {
           </Link>
 
           <div className="space-y-2">
-            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#312E81]">Reset password</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--color-primary)]">Reset password</div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
               {session ? "Choose a new password" : "Request a password reset link"}
             </h1>
@@ -135,7 +135,7 @@ export default function ResetPasswordPage() {
 
           <p className="text-center text-sm text-slate-500">
             Remembered it?{" "}
-            <Link to="/login" className="font-semibold text-[#312E81] hover:text-[#4338CA]">
+            <Link to="/login" className="font-semibold text-[var(--color-primary)] hover:text-[var(--color-primary-hover)]">
               Back to login
             </Link>
           </p>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Banner, Button, Field, Input, Modal } from "../../../components/ui.jsx";
+import { getUserErrorMessage } from "../../../utils/errorMessage.js";
 
 export default function ResetPasswordModal({ isOpen, onClose, onSubmit, isSubmitting }) {
   const [form, setForm] = useState({ password: "", confirmPassword: "" });
@@ -21,7 +22,7 @@ export default function ResetPasswordModal({ isOpen, onClose, onSubmit, isSubmit
       setError("");
       await onSubmit(form);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to update password");
+      setError(getUserErrorMessage(submitError, "We couldn't update your password. Please try again."));
     }
   }
 
@@ -42,7 +43,7 @@ export default function ResetPasswordModal({ isOpen, onClose, onSubmit, isSubmit
     >
       <form id="reset-password-form" className="space-y-5" onSubmit={handleSubmit}>
         {error ? (
-          <Banner title="Settings issue" tone="danger">
+          <Banner title="Error" tone="danger">
             {error}
           </Banner>
         ) : null}

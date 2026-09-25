@@ -16,6 +16,7 @@ import EditProfileModal from "./components/EditProfileModal.jsx";
 import DeleteAccountModal from "./components/DeleteAccountModal.jsx";
 import ResetPasswordModal from "./components/ResetPasswordModal.jsx";
 import { useNotifications } from "../../contexts/NotificationsContext.jsx";
+import { getUserErrorMessage } from "../../utils/errorMessage.js";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -34,13 +35,13 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (error) {
-      notifyError("Settings issue", error);
+      notifyError("Error", error);
     }
   }, [error, notifyError]);
 
   useEffect(() => {
     if (profileError) {
-      notifyError("Settings issue", profileError);
+      notifyError("Error", profileError);
     }
   }, [notifyError, profileError]);
 
@@ -76,7 +77,7 @@ export default function SettingsPage() {
       await refreshProfile();
       setSuccess("Profile photo updated.");
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Unable to upload avatar");
+      setError(getUserErrorMessage(uploadError, "We couldn't upload your photo. Please try again."));
     } finally {
       setIsUploadingAvatar(false);
       event.target.value = "";
@@ -92,7 +93,7 @@ export default function SettingsPage() {
       await refreshProfile();
       setSuccess("Profile photo removed.");
     } catch (removeError) {
-      setError(removeError instanceof Error ? removeError.message : "Unable to remove avatar");
+      setError(getUserErrorMessage(removeError, "We couldn't remove your photo. Please try again."));
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -111,7 +112,7 @@ export default function SettingsPage() {
       setIsResetPasswordOpen(false);
       setSuccess("Password updated.");
     } catch (passwordError) {
-      setError(passwordError instanceof Error ? passwordError.message : "Unable to update password");
+      setError(getUserErrorMessage(passwordError, "We couldn't update your password. Please try again."));
       throw passwordError;
     } finally {
       setIsUpdatingPassword(false);
@@ -126,7 +127,7 @@ export default function SettingsPage() {
       await logout();
       navigate("/", { replace: true });
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete account");
+      setError(getUserErrorMessage(deleteError, "We couldn't delete your account. Please try again."));
     } finally {
       setIsDeletingAccount(false);
       setIsDeleteOpen(false);
@@ -139,7 +140,7 @@ export default function SettingsPage() {
       await logout();
       navigate("/login", { replace: true });
     } catch (logoutError) {
-      setError(logoutError instanceof Error ? logoutError.message : "Unable to sign out");
+      setError(getUserErrorMessage(logoutError, "We couldn't sign you out. Please try again."));
     } finally {
       setIsLoggingOut(false);
     }
@@ -190,7 +191,7 @@ export default function SettingsPage() {
               </Button>
             </div>
 
-            <div className="border-t border-[#E6E8F0] pt-6">
+            <div className="border-t border-[var(--color-border)] pt-6">
               <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Bio</div>
               <p className="mt-3 text-sm leading-7 text-slate-600">
                 {profile?.bio || "Add a short bio so classmates know what you're studying or what you're interested in."}
@@ -213,7 +214,7 @@ export default function SettingsPage() {
 
           <Card className="motion-fade-up motion-delay-3 space-y-6">
             <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Account actions</div>
-            <div className="flex flex-col gap-4 border-b border-[#E6E8F0] pb-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 border-b border-[var(--color-border)] pb-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="text-base font-semibold text-slate-900">Sign out</div>
                 <div className="mt-1 text-sm text-slate-500">Sign out of ClassMatch on this device.</div>

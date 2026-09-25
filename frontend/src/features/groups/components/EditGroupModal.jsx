@@ -9,6 +9,7 @@ import {
   TextArea,
   Toggle,
 } from "../../../components/ui.jsx";
+import { getUserErrorMessage } from "../../../utils/errorMessage.js";
 
 export default function EditGroupModal({ group, isOpen, onClose, onSubmit, isSubmitting }) {
   const iconInputRef = useRef(null);
@@ -38,7 +39,7 @@ export default function EditGroupModal({ group, isOpen, onClose, onSubmit, isSub
       setError("");
       await onSubmit(form);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to update group");
+      setError(getUserErrorMessage(submitError, "We couldn't save your group changes. Please try again."));
     }
   }
 

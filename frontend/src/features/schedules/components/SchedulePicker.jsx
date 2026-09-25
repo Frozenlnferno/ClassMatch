@@ -6,7 +6,6 @@ export default function SchedulePicker({ schedules, selectedKey, onChange }) {
   const options = groups.flatMap((group) => group.items.map((schedule) => ({
     value: getScheduleKey(schedule),
     label: formatScheduleLabel(schedule),
-    description: "View and manage this term's courses",
     meta: `${schedule.class_count} classes`,
     group: group.year,
   })));

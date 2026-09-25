@@ -47,7 +47,9 @@ export async function uploadUserAvatar(file) {
     });
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `Failed to upload avatar: ${res.status}`);
+        const error = new Error(err.error || "Unable to upload profile photo");
+        error.status = res.status;
+        throw error;
     }
     return res.json();
 }

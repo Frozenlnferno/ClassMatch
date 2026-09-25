@@ -70,6 +70,16 @@ export function formatScheduleLabel(schedule) {
   return `${formatTerm(schedule.term)} ${schedule.year}`;
 }
 
+export function formatRole(role) {
+  if (!role) return "Member";
+
+  return String(role)
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+
 export function getYearOptions() {
   const currentYear = new Date().getFullYear();
   return Array.from({ length: 10 }, (_, index) => currentYear - index);

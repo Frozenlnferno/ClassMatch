@@ -44,7 +44,7 @@ export default function LandingPage() {
 
       <main className="space-y-8 py-8 sm:space-y-10 sm:py-12">
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-          <Card className="motion-fade-up overflow-hidden bg-[linear-gradient(145deg,_rgba(255,255,255,0.94)_0%,_rgba(239,246,255,0.92)_100%)] p-8 sm:p-10">
+          <Card className="motion-fade-up overflow-hidden bg-[var(--color-card)] p-8 sm:p-10">
             <div className="max-w-2xl space-y-6">
               <div className="space-y-4">
                 <h1 className="text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
@@ -67,10 +67,10 @@ export default function LandingPage() {
           </Card>
 
           <Card className="motion-fade-up motion-delay-1 relative overflow-hidden p-0">
-            <div className="absolute inset-x-6 top-6 h-32 rounded-[28px] bg-[radial-gradient(circle_at_top_left,_rgba(96,165,250,0.24),_transparent_58%)]" />
+            <div className="absolute inset-x-6 top-6 h-32 rounded-[28px] bg-[radial-gradient(circle_at_top_left,_var(--color-primary-soft),_transparent_58%)]" />
             <div className="relative space-y-4 p-6 sm:p-8">
               <div className="rounded-[28px] border border-indigo-100 bg-indigo-50/80 p-5">
-                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#312E81]">At a glance</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--color-primary)]">At a glance</div>
                 <div className="mt-3 text-2xl font-semibold text-slate-900">A ClassMatch workspace built around UIUC schedules, groups, and student profiles.</div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -93,10 +93,10 @@ export default function LandingPage() {
           </Card>
         </section>
 
-        <section className="motion-fade-up motion-delay-2 rounded-[32px] border border-white/80 bg-white/90 px-6 py-8 shadow-[0_22px_60px_-34px_rgba(15,23,42,0.18)] sm:px-8 sm:py-10">
+        <section className="motion-fade-up motion-delay-2 rounded-[32px] border border-[var(--color-border)] bg-white/90 px-6 py-8 shadow-[0_22px_60px_-34px_var(--color-shadow)] sm:px-8 sm:py-10">
           <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#312E81]">How it works</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--color-primary)]">How it works</div>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">Three simple steps to get connected</h2>
             </div>
             <p className="max-w-xl text-sm leading-6 text-slate-500">
@@ -112,7 +112,7 @@ export default function LandingPage() {
                 <Card key={step.title} className="motion-lift h-full rounded-[28px] bg-slate-50/70 p-6 shadow-none">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex size-11 items-center justify-center rounded-2xl bg-[#312E81] text-white">
+                      <div className="flex size-11 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-white">
                         <Icon className="size-5" />
                       </div>
                       <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">

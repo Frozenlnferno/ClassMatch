@@ -8,6 +8,7 @@ import {
   TextArea,
   Toggle,
 } from "../../../components/ui.jsx";
+import { getUserErrorMessage } from "../../../utils/errorMessage.js";
 
 export default function CreateGroupModal({ isOpen, onClose, onSubmit, isSubmitting }) {
   const [form, setForm] = useState({
@@ -38,7 +39,7 @@ export default function CreateGroupModal({ isOpen, onClose, onSubmit, isSubmitti
         joinable: form.joinable,
       });
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to create group");
+      setError(getUserErrorMessage(submitError, "We couldn't create your group. Please try again."));
     }
   }
 

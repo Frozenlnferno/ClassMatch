@@ -8,12 +8,22 @@ function cn(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
+function getAvatarGradient(name = "") {
+  const hash = Array.from(String(name)).reduce((value, character) => (
+    ((value << 5) - value + character.charCodeAt(0)) | 0
+  ), 0);
+  const hue = Math.abs(hash) % 360;
+  const accentHue = (hue + 36) % 360;
+
+  return `linear-gradient(135deg, hsla(${hue}, 76%, 58%, 0.92), hsla(${accentHue}, 68%, 38%, 0.42))`;
+}
+
 export function buttonStyles({ variant = "primary", size = "md", className = "" } = {}) {
   const variantStyles = {
-    primary: "bg-[#312E81] !text-white shadow-[0_18px_34px_-20px_rgba(49,46,129,0.9)] hover:bg-[#4338CA] hover:!text-white",
-    secondary: "bg-white text-[#161A2D] border border-[#E6E8F0] shadow-sm hover:border-[#06B6D4] hover:bg-cyan-50/60",
+    primary: "bg-[var(--color-primary)] !text-white shadow-[0_18px_34px_-20px_var(--color-shadow)] hover:bg-[var(--color-primary-hover)] hover:!text-white",
+    secondary: "bg-white text-[var(--color-text-card)] border border-[var(--color-border)] shadow-sm hover:border-[var(--color-focus)] hover:bg-cyan-50/60",
     ghost: "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-    danger: "bg-[#E11D48] !text-white shadow-[0_18px_34px_-20px_rgba(225,29,72,0.9)] hover:bg-rose-500 hover:!text-white",
+    danger: "bg-[var(--color-error)] !text-white shadow-[0_18px_34px_-20px_var(--color-shadow)] hover:bg-rose-500 hover:!text-white",
   };
   const sizeStyles = {
     sm: "px-3 py-2 text-sm",
@@ -37,7 +47,7 @@ export function Card({ className, children, ...props }) {
   return (
     <div
       className={cn(
-        "motion-soft rounded-[28px] border border-[#E6E8F0] bg-white/90 p-6 shadow-[0_22px_60px_-30px_rgba(15,23,42,0.18)] backdrop-blur",
+        "motion-soft rounded-[28px] border border-[var(--color-border)] bg-white/90 p-6 shadow-[0_22px_60px_-30px_var(--color-shadow)] backdrop-blur",
         className,
       )}
       {...props}
@@ -61,7 +71,7 @@ export function Field({ label, hint, error, children, className = "" }) {
 }
 
 const fieldBaseClass =
-  "motion-soft w-full rounded-2xl border border-[#E6E8F0] bg-slate-50/80 px-4 py-3 text-sm text-[#161A2D] shadow-inner shadow-white transition-[background-color,border-color,box-shadow,color,transform] duration-200 outline-none placeholder:text-slate-400 focus:border-[#06B6D4] focus:bg-white focus:ring-4 focus:ring-cyan-100";
+  "w-full rounded-2xl border border-[var(--color-border)] bg-slate-50/80 px-4 py-3 text-sm text-[var(--color-text-card)] outline-none placeholder:text-slate-400 transition-colors duration-150 focus:border-[var(--color-focus)]";
 
 export function Input({ className, ...props }) {
   return <input className={cn(fieldBaseClass, className)} {...props} />;
@@ -134,20 +144,20 @@ export function DropdownSelector({
           }
         }}
         className={cn(
-          "flex w-full items-center justify-between gap-4 border bg-white px-4 py-3 text-left transition-[border-color,border-radius,background-color,box-shadow] duration-200 outline-none focus:border-[#06B6D4] focus:ring-4 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:opacity-60",
+          "flex w-full items-center justify-between gap-4 border bg-white px-4 py-3 text-left transition-[border-color,border-radius,background-color,box-shadow] duration-200 outline-none focus:border-[var(--color-focus)] focus:ring-4 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:opacity-60",
           isOpen
-            ? "rounded-t-2xl border-[#312E81] border-b-[#E6E8F0] shadow-sm"
-            : "rounded-2xl border-[#E6E8F0] hover:border-cyan-300",
+            ? "rounded-t-2xl border-[var(--color-primary)] border-b-[var(--color-border)] shadow-sm"
+            : "rounded-2xl border-[var(--color-border)] hover:border-cyan-300",
         )}
       >
         <span className="min-w-0">
-          <span className={cn("block truncate text-sm font-semibold", selectedOption ? "text-[#161A2D]" : "text-slate-400")}>
+          <span className={cn("block truncate text-sm font-semibold", selectedOption ? "text-[var(--color-text-card)]" : "text-slate-400")}>
             {selectedOption?.label || placeholder}
           </span>
           {selectedOption?.description ? <span className="mt-1 block truncate text-xs text-slate-500">{selectedOption.description}</span> : null}
         </span>
         <span className="flex shrink-0 items-center gap-3">
-          {selectedOption?.meta ? <span className="text-xs font-semibold text-[#312E81]">{selectedOption.meta}</span> : null}
+          {selectedOption?.meta ? <span className="text-xs font-semibold text-[var(--color-primary)]">{selectedOption.meta}</span> : null}
           <ChevronDownIcon className={cn("size-4 text-slate-500 transition-transform duration-200", isOpen && "rotate-180")} />
         </span>
       </button>
@@ -157,7 +167,7 @@ export function DropdownSelector({
           id={listboxId}
           role="listbox"
           aria-label={label}
-          className="absolute z-30 max-h-80 w-full overflow-y-auto rounded-b-2xl border border-t-0 border-[#312E81] bg-white py-1 shadow-[0_22px_40px_-24px_rgba(15,23,42,0.45)]"
+          className="absolute z-30 max-h-80 w-full overflow-y-auto rounded-b-2xl border border-t-0 border-[var(--color-primary)] bg-white py-1 shadow-[0_22px_40px_-24px_var(--color-shadow)]"
         >
           {options.map((option, index) => {
             const isSelected = String(option.value) === String(value);
@@ -177,14 +187,14 @@ export function DropdownSelector({
                   onClick={() => handleSelect(option)}
                   className={cn(
                     "flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors duration-150 focus:bg-cyan-50 focus:outline-none",
-                    isSelected ? "bg-indigo-50 text-[#312E81]" : "text-slate-700 hover:bg-cyan-50/70",
+                    isSelected ? "bg-indigo-50 text-[var(--color-primary)]" : "text-slate-700 hover:bg-cyan-50/70",
                   )}
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold">{option.label}</span>
                     {option.description ? <span className="mt-1 block truncate text-xs text-slate-500">{option.description}</span> : null}
                   </span>
-                  {option.meta ? <span className="shrink-0 text-xs font-semibold text-[#312E81]">{option.meta}</span> : null}
+                  {option.meta ? <span className="shrink-0 text-xs font-semibold text-[var(--color-primary)]">{option.meta}</span> : null}
                 </button>
                 {index < options.length - 1 ? <div className="mx-4 h-px bg-slate-200/80" aria-hidden="true" /> : null}
               </div>
@@ -214,8 +224,8 @@ export function Banner({ title, children, tone = "info" }) {
 
 export function Badge({ children, tone = "neutral" }) {
   const tones = {
-    neutral: "bg-slate-100 text-slate-700",
-    blue: "bg-indigo-100 text-indigo-700",
+    neutral: "border border-[var(--color-border-strong)] bg-[var(--color-surface-secondary)] text-[var(--color-text-card)]",
+    blue: "border border-[var(--color-border-strong)] bg-[var(--color-surface-secondary)] text-[var(--color-primary)]",
     emerald: "bg-emerald-100 text-emerald-700",
     amber: "bg-amber-100 text-amber-700",
     rose: "bg-rose-100 text-rose-700",
@@ -228,7 +238,7 @@ export function PageHeader({ eyebrow, title, description, actions }) {
   return (
     <div className="motion-fade-up mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="space-y-2">
-        {eyebrow ? <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#312E81]">{eyebrow}</div> : null}
+        {eyebrow ? <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--color-primary)]">{eyebrow}</div> : null}
         <div className="space-y-1">
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">{title}</h1>
           {description ? <p className="max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">{description}</p> : null}
@@ -254,7 +264,7 @@ export function EmptyState({ title, description, action, className = "" }) {
 export function LoadingState({ title = "Loading", description = "Pulling in the latest details for you.", compact = false }) {
   return (
     <div className={cn("flex flex-col items-center justify-center gap-3 text-center", compact ? "py-3" : "rounded-[28px] border border-white/80 bg-white/90 px-6 py-10 shadow-sm")}>
-      <div className="size-9 animate-spin rounded-full border-4 border-indigo-100 border-t-[#312E81]" />
+      <div className="size-9 animate-spin rounded-full border-4 border-indigo-100 border-t-[var(--color-primary)]" />
       <div className="space-y-1">
         <div className="text-sm font-semibold text-slate-900">{title}</div>
         {!compact ? <div className="text-sm text-slate-500">{description}</div> : null}
@@ -273,11 +283,14 @@ export function Avatar({ src, name, size = "md", className = "" }) {
   };
 
   if (src) {
-    return <img src={src} alt={name} className={cn("motion-soft rounded-2xl object-cover", sizes[size], className)} />;
+    return <img src={src} alt={name} className={cn("motion-soft rounded-full object-cover", sizes[size], className)} />;
   }
 
   return (
-    <div className={cn("motion-soft flex items-center justify-center rounded-2xl bg-gradient-to-br from-[#312E81] to-[#06B6D4] font-semibold text-white", sizes[size], className)}>
+    <div
+      className={cn("motion-soft flex items-center justify-center rounded-full font-semibold text-white ring-1 ring-white/20", sizes[size], className)}
+      style={{ background: getAvatarGradient(name) }}
+    >
       {getInitials(name)}
     </div>
   );
@@ -297,11 +310,11 @@ export function AvatarStack({ people = [], max = 4, size = "sm", label = "People
           src={person.avatar_url || person.member_avatar_url}
           name={person.member_name || person.name}
           size={size}
-          className={cn("ring-2 ring-white", index > 0 ? "-ml-2" : "")}
+          className={cn("!ring-2 !ring-[var(--color-page)]", index > 0 ? "-ml-2" : "")}
         />
       ))}
       {remainingCount ? (
-        <span className="-ml-2 flex size-10 items-center justify-center rounded-2xl bg-[#312E81] text-xs font-semibold text-white ring-2 ring-white">
+        <span className="-ml-2 flex size-10 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs font-semibold text-white ring-2 ring-[var(--color-page)]">
           +{remainingCount}
         </span>
       ) : null}
@@ -323,7 +336,7 @@ export function ProgressBar({ value = 0, label }) {
     <div className="space-y-2">
       {label ? <div className="flex items-center justify-between text-xs font-medium text-slate-500"><span>{label}</span><span>{Math.round(value)}%</span></div> : null}
       <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-        <div className="motion-soft h-full rounded-full bg-[#312E81] transition-[width,transform,background-color] duration-300" style={{ width: `${value}%` }} />
+        <div className="motion-soft h-full rounded-full bg-[var(--color-primary)] transition-[width,transform,background-color] duration-300" style={{ width: `${value}%` }} />
       </div>
     </div>
   );
@@ -336,16 +349,18 @@ export function Toggle({ checked, onChange, onLabel = "Open", offLabel = "Closed
       onClick={() => onChange(!checked)}
       className={cn(
         "motion-soft inline-flex items-center gap-3 rounded-full border px-2 py-2 text-sm font-medium",
-        checked ? "border-indigo-200 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-slate-50 text-slate-600",
+        checked
+          ? "border-[var(--color-primary)] bg-indigo-50 text-indigo-700"
+          : "border-[var(--color-border-strong)] bg-[var(--color-surface-secondary)] text-[var(--color-text-card)]",
       )}
     >
       <span
         className={cn(
           "motion-soft flex h-7 w-12 items-center rounded-full px-1",
-          checked ? "bg-[#312E81] justify-end" : "bg-slate-300 justify-start",
+          checked ? "bg-[var(--color-primary)] justify-end" : "bg-[var(--color-text-subdued)] justify-start",
         )}
       >
-        <span className="motion-soft size-5 rounded-full bg-white shadow-sm" />
+        <span className="motion-soft size-5 rounded-full !bg-[var(--color-text-default)] shadow-sm" />
       </span>
       <span>{checked ? onLabel : offLabel}</span>
     </button>
@@ -374,11 +389,11 @@ export function Modal({ isOpen, onClose, title, description, children, actions, 
   const widthClass = size === "lg" ? "max-w-4xl" : size === "sm" ? "max-w-lg" : "max-w-2xl";
 
   return createPortal(
-    <div className="motion-fade-in fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-4 backdrop-blur-sm sm:items-center">
+    <div className="motion-fade-in fixed inset-0 z-50 flex items-end justify-center bg-[var(--color-overlay)] p-4 backdrop-blur-sm sm:items-center">
       <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
       <div
         className={cn(
-          "motion-scale-in relative z-10 flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden rounded-[32px] border border-white/90 bg-white shadow-[0_40px_90px_-40px_rgba(15,23,42,0.45)]",
+          "motion-scale-in relative z-10 flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden rounded-[32px] border border-[var(--color-border-strong)] !bg-[var(--color-surface-level-1)] shadow-[0_40px_90px_-40px_var(--color-shadow)]",
           widthClass,
         )}
       >

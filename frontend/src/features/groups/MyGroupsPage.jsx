@@ -10,6 +10,7 @@ import {
   PageHeader,
 } from "../../components/ui.jsx";
 import { PlusIcon } from "../../components/icons.jsx";
+import { formatRole } from "../../utils/classMatch.js";
 import CreateGroupModal from "./components/CreateGroupModal.jsx";
 import { useNotifications } from "../../contexts/NotificationsContext.jsx";
 
@@ -84,7 +85,7 @@ export default function MyGroupsPage() {
         )}
       />
 
-      <Card className="motion-fade-up motion-delay-1 space-y-5">
+      <Card className="motion-fade-up motion-delay-1 !bg-[var(--color-surface-level-1)] space-y-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-sm font-semibold text-slate-900">All groups</div>
@@ -108,9 +109,9 @@ export default function MyGroupsPage() {
         ) : groups.length ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {groups.map((group) => (
-              <Card
+              <div
                 key={group.id}
-                className="motion-lift cursor-pointer rounded-[28px] p-5 shadow-md ring-1 ring-slate-100"
+                className="group-summary-card motion-lift cursor-pointer rounded-[var(--radius-card)] border-[var(--color-border-strong)] p-5 shadow-md ring-1 ring-slate-100"
                 role="link"
                 tabIndex={0}
                 onClick={() => openGroup(group.id)}
@@ -127,7 +128,7 @@ export default function MyGroupsPage() {
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-lg font-semibold text-slate-900">{group.name}</div>
                         <div className="mt-2 flex flex-wrap gap-2">
-                          <Badge tone="neutral">{group.role}</Badge>
+                          <Badge tone="neutral">{formatRole(group.role)}</Badge>
                           <Badge tone={group.joinable ? "emerald" : "amber"}>
                             {group.joinable ? "Open" : "Closed"}
                           </Badge>
@@ -143,7 +144,7 @@ export default function MyGroupsPage() {
                     </span>
                   </div>
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
         ) : (

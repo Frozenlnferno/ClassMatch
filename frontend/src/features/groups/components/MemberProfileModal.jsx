@@ -5,7 +5,7 @@ import {
   LoadingState,
   Modal,
 } from "../../../components/ui.jsx";
-import { formatDate } from "../../../utils/classMatch.js";
+import { formatDate, formatRole } from "../../../utils/classMatch.js";
 
 export default function MemberProfileModal({
   member,
@@ -35,7 +35,7 @@ export default function MemberProfileModal({
             <Avatar src={profile?.avatar_url || member?.avatar_url} name={profile?.name || member?.name} size="xl" />
             <div>
               <div className="text-2xl font-semibold text-slate-900">{profile?.name || member?.name}</div>
-              <div className="mt-1 text-sm text-slate-500">{member?.role}</div>
+              <div className="mt-1 text-sm text-slate-500">{formatRole(member?.role)}</div>
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">

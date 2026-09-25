@@ -22,8 +22,8 @@ export function LogoMark({ className = "size-8", ...props }) {
       <rect x="4" y="7" width="40" height="34" rx="14" fill="currentColor" opacity="0.14" />
       <rect x="10" y="11" width="28" height="26" rx="10" fill="currentColor" />
       <path d="M18 18.5h12M18 24h8m-8 5.5h12" stroke="white" strokeWidth="2.8" strokeLinecap="round" />
-      <circle cx="34.5" cy="30.5" r="5.5" fill="#BFDBFE" />
-      <path d="M34.5 28v5M32 30.5h5" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="34.5" cy="30.5" r="5.5" fill="var(--color-surface-secondary)" />
+      <path d="M34.5 28v5M32 30.5h5" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }

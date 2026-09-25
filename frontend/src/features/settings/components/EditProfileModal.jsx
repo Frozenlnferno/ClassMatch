@@ -7,6 +7,7 @@ import {
   Modal,
   TextArea,
 } from "../../../components/ui.jsx";
+import { getUserErrorMessage } from "../../../utils/errorMessage.js";
 
 export default function EditProfileModal({ isOpen, onClose, profile, onSubmit, isSubmitting }) {
   const [form, setForm] = useState({ name: "", bio: "" });
@@ -35,7 +36,7 @@ export default function EditProfileModal({ isOpen, onClose, profile, onSubmit, i
         bio: form.bio.trim(),
       });
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to update profile");
+      setError(getUserErrorMessage(submitError, "We couldn't save your profile changes. Please try again."));
     }
   }
 

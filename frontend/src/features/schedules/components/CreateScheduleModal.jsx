@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Banner,
   Button,
@@ -15,6 +15,7 @@ import {
   formatScheduleLabel,
   getYearOptions,
 } from "../../../utils/classMatch.js";
+import { getUserErrorMessage } from "../../../utils/errorMessage.js";
 
 function createCourseRow() {
   return {
@@ -43,6 +44,7 @@ export default function CreateScheduleModal({
     courses: [createCourseRow()],
   });
   const [error, setError] = useState("");
+  const errorRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -55,6 +57,12 @@ export default function CreateScheduleModal({
     });
     setError("");
   }, [fixedSchedule, isOpen]);
+
+  useEffect(() => {
+    if (error) {
+      errorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [error]);
 
   function updateCourse(index, field, value) {
     setForm((current) => ({
@@ -91,7 +99,7 @@ export default function CreateScheduleModal({
       try {
         await onIcsSubmit(selectedFile);
       } catch (submitError) {
-        setError(submitError instanceof Error ? submitError.message : "Unable to upload schedule");
+        setError(getUserErrorMessage(submitError, "We couldn't upload your schedule. Please try again."));
       }
       return;
     }
@@ -121,7 +129,7 @@ export default function CreateScheduleModal({
         courses: normalizedCourses,
       });
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to add classes");
+      setError(getUserErrorMessage(submitError, "We couldn't add those classes. Please try again."));
     }
   }
 
@@ -171,7 +179,7 @@ export default function CreateScheduleModal({
               onClick={() => setMethod("ics")}
               className={[
                 "motion-lift rounded-[24px] border p-5 text-left transition-[transform,border-color,background-color,box-shadow] duration-200",
-                method === "ics" ? "border-indigo-300 bg-indigo-50" : "border-[#E6E8F0] bg-slate-50 hover:border-cyan-300",
+                method === "ics" ? "border-indigo-300 bg-indigo-50" : "border-[var(--color-border)] bg-slate-50 hover:border-cyan-300",
               ].join(" ")}
             >
               <div className="text-sm font-semibold text-slate-900">ICS upload</div>
@@ -185,7 +193,7 @@ export default function CreateScheduleModal({
               onClick={() => setMethod("crn")}
               className={[
                 "motion-lift rounded-[24px] border p-5 text-left transition-[transform,border-color,background-color,box-shadow] duration-200",
-                method === "crn" ? "border-indigo-300 bg-indigo-50" : "border-[#E6E8F0] bg-slate-50 hover:border-cyan-300",
+                method === "crn" ? "border-indigo-300 bg-indigo-50" : "border-[var(--color-border)] bg-slate-50 hover:border-cyan-300",
               ].join(" ")}
             >
               <div className="text-sm font-semibold text-slate-900">CRN entry</div>
@@ -197,9 +205,11 @@ export default function CreateScheduleModal({
         ) : null}
 
         {error ? (
-          <Banner title="Schedule issue" tone="danger">
-            {error}
-          </Banner>
+          <div ref={errorRef} tabIndex={-1}>
+            <Banner title="Schedule issue" tone="danger">
+              {error}
+            </Banner>
+          </div>
         ) : null}
 
         {method === "ics" ? (
@@ -228,37 +238,39 @@ export default function CreateScheduleModal({
                 type="file"
                 accept=".ics,text/calendar"
                 onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
-                className="block w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600 file:mr-4 file:rounded-xl file:border-0 file:bg-[#312E81] file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
+                className="block w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600 file:mr-4 file:rounded-xl file:border-0 file:bg-[var(--color-primary)] file:px-4 file:py-2 file:text-sm file:font-medium file:text-white"
               />
             </Field>
 
           </div>
         ) : (
           <div className="space-y-5">
-            <div className="space-y-5 rounded-[24px] border border-[#E6E8F0] bg-slate-50/70 p-4">
+            <div className="space-y-5 rounded-[24px] border border-[var(--color-border)] bg-slate-50/70 p-4">
               <div>
                 <div className="text-sm font-semibold text-slate-900">Academic term</div>
                 <div className="mt-1 text-sm text-slate-500">Choose when these classes are offered.</div>
               </div>
-              <div className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Year</div>
-                <DropdownSelector
-                  label="Academic year"
-                  value={form.year}
-                  options={getYearOptions().map((year) => ({ value: year, label: String(year) }))}
-                  onChange={(year) => setForm((current) => ({ ...current, year: Number(year) }))}
-                  disabled={Boolean(fixedSchedule)}
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Term</div>
-                <DropdownSelector
-                  label="Academic term"
-                  value={form.term}
-                  options={TERM_OPTIONS.map((term) => ({ value: term.value, label: term.label }))}
-                  onChange={(term) => setForm((current) => ({ ...current, term }))}
-                  disabled={Boolean(fixedSchedule)}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="min-w-0 space-y-2">
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Year</div>
+                  <DropdownSelector
+                    label="Academic year"
+                    value={form.year}
+                    options={getYearOptions().map((year) => ({ value: year, label: String(year) }))}
+                    onChange={(year) => setForm((current) => ({ ...current, year: Number(year) }))}
+                    disabled={Boolean(fixedSchedule)}
+                  />
+                </div>
+                <div className="min-w-0 space-y-2">
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Term</div>
+                  <DropdownSelector
+                    label="Academic term"
+                    value={form.term}
+                    options={TERM_OPTIONS.map((term) => ({ value: term.value, label: term.label }))}
+                    onChange={(term) => setForm((current) => ({ ...current, term }))}
+                    disabled={Boolean(fixedSchedule)}
+                  />
+                </div>
               </div>
             </div>
 

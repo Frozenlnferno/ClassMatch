@@ -50,7 +50,7 @@ export default function InvitePage() {
     <div className="mx-auto flex min-h-screen max-w-xl items-center px-4 py-10 sm:px-6">
       <Card className="motion-fade-up w-full p-8 text-center sm:p-10">
         <Link to="/" className="mx-auto inline-flex items-center gap-3">
-          <LogoMark className="size-10 text-[#312E81]" />
+          <LogoMark className="size-10 text-[var(--color-primary)]" />
           <span className="text-base font-semibold text-slate-900">ClassMatch</span>
         </Link>
 
@@ -79,7 +79,7 @@ export default function InvitePage() {
               </p>
             </div>
             <div className="mx-auto flex w-fit items-center gap-3 rounded-2xl bg-indigo-50 px-4 py-3 text-sm font-medium text-indigo-800">
-              <span className="size-4 animate-spin rounded-full border-2 border-indigo-200 border-t-[#312E81]" />
+              <span className="size-4 animate-spin rounded-full border-2 border-indigo-200 border-t-[var(--color-primary)]" />
               Joining group...
             </div>
           </div>

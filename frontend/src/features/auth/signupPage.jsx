@@ -71,7 +71,7 @@ export default function SignUpPage() {
         <Card className="motion-fade-up p-8 sm:p-10">
           <div className="space-y-6">
             <Link to="/" className="inline-flex items-center gap-3">
-              <LogoMark className="size-10 text-[#312E81]" />
+              <LogoMark className="size-10 text-[var(--color-primary)]" />
               <span className="text-base font-semibold text-slate-900">ClassMatch</span>
             </Link>
             <div className="space-y-2">
@@ -90,9 +90,9 @@ export default function SignUpPage() {
             </button>
 
             <div className="flex items-center gap-3 text-xs text-slate-400">
-              <span className="h-px flex-1 bg-[#E6E8F0]" />
+              <span className="h-px flex-1 bg-[var(--color-border)]" />
               <span>or</span>
-              <span className="h-px flex-1 bg-[#E6E8F0]" />
+              <span className="h-px flex-1 bg-[var(--color-border)]" />
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
@@ -164,7 +164,7 @@ export default function SignUpPage() {
         </Card>
         <p className="mt-6 text-center text-sm text-slate-500">
           Already have an account?{" "}
-          <Link to={withNextPath("/login", nextPath)} className="font-semibold text-[#312E81] hover:text-[#4338CA]">
+          <Link to={withNextPath("/login", nextPath)} className="font-semibold text-[var(--color-primary)] hover:text-[var(--color-primary-hover)]">
             Log in
           </Link>
         </p>

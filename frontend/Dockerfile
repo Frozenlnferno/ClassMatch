@@ -1,9 +1,21 @@
-FROM node:24.14.1-alpine3.23 AS build
+FROM node:24.14.1-alpine3.23 AS dependencies
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci
+
+
+FROM dependencies AS dev
+
+COPY . .
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+
+FROM dependencies AS build
 
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_PUBLISHABLE_KEY

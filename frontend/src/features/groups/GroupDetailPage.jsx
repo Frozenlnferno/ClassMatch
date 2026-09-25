@@ -26,7 +26,7 @@ import {
   LoadingState,
   buttonStyles,
 } from "../../components/ui.jsx";
-import { CopyIcon } from "../../components/icons.jsx";
+import { ArrowDownIcon, ArrowUpIcon, CopyIcon, TrashIcon } from "../../components/icons.jsx";
 import {
   buildInviteLink,
   canManageMember,
@@ -72,6 +72,18 @@ export default function GroupDetailPage() {
   const [isBioExpanded, setIsBioExpanded] = useState(false);
   const [areAllMembersVisible, setAreAllMembersVisible] = useState(false);
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true);
+
+  useEffect(() => {
+    const twoColumnLayout = window.matchMedia("(min-width: 1280px)");
+
+    function collapseMembersWhenNarrow(event) {
+      if (!event.matches) setAreAllMembersVisible(false);
+    }
+
+    collapseMembersWhenNarrow(twoColumnLayout);
+    twoColumnLayout.addEventListener("change", collapseMembersWhenNarrow);
+    return () => twoColumnLayout.removeEventListener("change", collapseMembersWhenNarrow);
+  }, []);
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
   const [isSavingGroup, setIsSavingGroup] = useState(false);
   const [isManagingInvite, setIsManagingInvite] = useState(false);
@@ -455,13 +467,13 @@ export default function GroupDetailPage() {
                   }}
                   className={[
                     "motion-lift w-full rounded-[var(--radius-card)] border border-[var(--color-border)] bg-slate-50/70 p-4 text-left transition-[transform,border-color,background-color,box-shadow] duration-200 hover:border-cyan-300 hover:bg-cyan-50/40",
-                    index >= 5 && !areAllMembersVisible ? "hidden sm:block" : "",
+                    index >= 5 && !areAllMembersVisible ? "hidden xl:block" : "",
                   ].filter(Boolean).join(" ")}
                 >
                   <div
                     className={[
-                      "flex flex-col items-start gap-3 sm:flex-row sm:items-center",
-                      hasMemberActions ? "sm:justify-between" : "",
+                      "flex items-center gap-3",
+                      hasMemberActions ? "justify-between" : "",
                     ].filter(Boolean).join(" ")}
                   >
                     <div className="flex min-w-0 items-center gap-4">
@@ -474,7 +486,7 @@ export default function GroupDetailPage() {
                       </div>
                     </div>
                     {hasMemberActions ? (
-                      <div className="flex w-full flex-nowrap items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:justify-end sm:overflow-visible sm:pb-0">
+                      <div className="flex shrink-0 items-center gap-2">
                         {canPromote ? (
                           <button
                             type="button"
@@ -483,9 +495,11 @@ export default function GroupDetailPage() {
                               handleRoleChange(member, "admin");
                             }}
                             disabled={busyMemberId === member.user_id}
-                            className="motion-lift shrink-0 rounded-2xl bg-indigo-100 px-3 py-2 text-xs font-semibold text-indigo-700 transition-[transform,background-color,box-shadow] duration-200 hover:bg-indigo-200 disabled:opacity-60"
+                            aria-label={`Promote ${member.name} to admin`}
+                            className="motion-lift inline-flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--color-primary)] text-xs font-semibold text-white transition-[transform,background-color,box-shadow] duration-200 hover:bg-[var(--color-primary-hover)] disabled:opacity-60 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-3 sm:py-2"
                           >
-                            Promote
+                            <ArrowUpIcon className="size-4" />
+                            <span className="hidden sm:inline">Promote</span>
                           </button>
                         ) : null}
                         {canDemote ? (
@@ -496,9 +510,11 @@ export default function GroupDetailPage() {
                               handleRoleChange(member, "member");
                             }}
                             disabled={busyMemberId === member.user_id}
-                            className="motion-lift shrink-0 rounded-2xl bg-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition-[transform,background-color,box-shadow] duration-200 hover:bg-slate-300 disabled:opacity-60"
+                            aria-label={`Demote ${member.name} to member`}
+                            className="motion-lift inline-flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-border-strong)] bg-[var(--color-surface-level-2)] text-xs font-semibold text-[var(--color-text-card)] transition-[transform,background-color,border-color,box-shadow] duration-200 hover:border-[var(--color-focus)] hover:bg-[var(--color-surface-secondary)] disabled:opacity-60 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-3 sm:py-2"
                           >
-                            Demote
+                            <ArrowDownIcon className="size-4" />
+                            <span className="hidden sm:inline">Demote</span>
                           </button>
                         ) : null}
                         {canManage ? (
@@ -509,9 +525,11 @@ export default function GroupDetailPage() {
                               setMemberPendingKick(member);
                             }}
                             disabled={busyMemberId === member.user_id}
-                            className="motion-lift shrink-0 rounded-2xl bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700 transition-[transform,background-color,box-shadow] duration-200 hover:bg-rose-200 disabled:opacity-60"
+                            aria-label={`Remove ${member.name} from group`}
+                            className="motion-lift inline-flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-error)] bg-[var(--color-error-soft)] text-xs font-semibold text-[var(--color-error)] transition-[transform,background-color,border-color,color,box-shadow] duration-200 hover:bg-[var(--color-error)] hover:text-white disabled:opacity-60 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-3 sm:py-2"
                           >
-                            Kick
+                            <TrashIcon className="size-4" />
+                            <span className="hidden sm:inline">Kick</span>
                           </button>
                         ) : null}
                       </div>
@@ -525,7 +543,7 @@ export default function GroupDetailPage() {
                 type="button"
                 aria-expanded={areAllMembersVisible}
                 onClick={() => setAreAllMembersVisible((current) => !current)}
-                className="motion-lift w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--color-primary)] transition-[transform,border-color,background-color] duration-200 hover:border-cyan-300 hover:bg-cyan-50/60 sm:hidden"
+                className="motion-lift w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--color-primary)] transition-[transform,border-color,background-color] duration-200 hover:border-cyan-300 hover:bg-cyan-50/60 xl:hidden"
               >
                 {areAllMembersVisible ? "Show fewer members" : `See all members (${members.length})`}
               </button>

@@ -72,15 +72,10 @@ export default function AppLayout() {
               {isMobileMenuOpen ? <CloseIcon className="size-5" /> : <MenuIcon className="size-5" />}
             </button>
 
-            <NavLink
+            <Link
               to="/settings"
               aria-label="Open settings"
-              className={({ isActive }) => [
-                "motion-lift inline-flex size-11 items-center justify-center rounded-2xl border transition-[transform,border-color,box-shadow,background-color] duration-200 md:h-12 md:w-auto md:gap-3 md:px-2 md:pr-4",
-                isActive
-                  ? "border-[var(--color-primary)] bg-indigo-50 shadow-sm"
-                  : "border-transparent bg-transparent hover:border-[var(--color-border)] hover:bg-white",
-              ].join(" ")}
+              className="motion-lift inline-flex size-11 items-center justify-center rounded-2xl border border-transparent bg-transparent transition-[transform,border-color,box-shadow,background-color] duration-200 hover:border-[var(--color-border)] hover:bg-white md:h-12 md:w-auto md:gap-3 md:px-2 md:pr-4"
             >
                 <Avatar
                   src={profile?.avatar_url}
@@ -91,7 +86,7 @@ export default function AppLayout() {
                 <span className="hidden max-w-28 truncate text-sm font-semibold text-[var(--color-text-card)] md:block">
                   {profileLabel}
                 </span>
-            </NavLink>
+            </Link>
           </div>
         </div>
 

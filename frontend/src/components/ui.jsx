@@ -15,7 +15,7 @@ function getAvatarGradient(name = "") {
   const hue = Math.abs(hash) % 360;
   const accentHue = (hue + 36) % 360;
 
-  return `linear-gradient(135deg, hsla(${hue}, 76%, 58%, 0.92), hsla(${accentHue}, 68%, 38%, 0.42))`;
+  return `linear-gradient(135deg, hsl(${hue}, 76%, 58%), hsl(${accentHue}, 68%, 38%))`;
 }
 
 export function buttonStyles({ variant = "primary", size = "md", className = "" } = {}) {
@@ -310,11 +310,11 @@ export function AvatarStack({ people = [], max = 4, size = "sm", label = "People
           src={person.avatar_url || person.member_avatar_url}
           name={person.member_name || person.name}
           size={size}
-          className={cn("!ring-2 !ring-[var(--color-page)]", index > 0 ? "-ml-2" : "")}
+          className={cn("!ring-2 !ring-[var(--color-avatar-separator)]", index > 0 ? "-ml-2" : "")}
         />
       ))}
       {remainingCount ? (
-        <span className="-ml-2 flex size-10 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs font-semibold text-white ring-2 ring-[var(--color-page)]">
+        <span className="-ml-2 flex size-10 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs font-semibold text-white ring-2 ring-[var(--color-avatar-separator)]">
           +{remainingCount}
         </span>
       ) : null}

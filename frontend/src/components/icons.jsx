@@ -67,6 +67,24 @@ export function ArrowRightIcon(props) {
   );
 }
 
+export function ArrowUpIcon(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 19V5" />
+      <path d="m6 11 6-6 6 6" />
+    </IconBase>
+  );
+}
+
+export function ArrowDownIcon(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 5v14" />
+      <path d="m18 13-6 6-6-6" />
+    </IconBase>
+  );
+}
+
 export function MenuIcon(props) {
   return (
     <IconBase {...props}>

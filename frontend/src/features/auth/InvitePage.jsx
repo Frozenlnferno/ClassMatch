@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import useSession from "../../utils/useSession.js";
 import { joinGroupByInviteLink } from "../groups/groupService.js";
 import { Card, LoadingState, buttonStyles } from "../../components/ui.jsx";
-import { LogoMark, UsersIcon } from "../../components/icons.jsx";
+import { UsersIcon } from "../../components/icons.jsx";
 import { withNextPath } from "../../utils/classMatch.js";
 
 export default function InvitePage() {
@@ -50,8 +50,17 @@ export default function InvitePage() {
     <div className="mx-auto flex min-h-screen max-w-xl items-center px-4 py-10 sm:px-6">
       <Card className="motion-fade-up w-full p-8 text-center sm:p-10">
         <Link to="/" className="mx-auto inline-flex items-center gap-3">
-          <LogoMark className="size-10 text-[var(--color-primary)]" />
-          <span className="text-base font-semibold text-slate-900">ClassMatch</span>
+          <div className="size-11 shrink-0 overflow-hidden rounded-xl">
+            <img
+              src="/Classmatch-Icon.png"
+              alt="ClassMatch"
+              className="size-full scale-[1.2] object-contain"
+            />
+          </div>
+          <div className="text-xl font-bold tracking-tight sm:text-2xl">
+            <span className="text-white">Class</span>
+            <span className="text-[#fd8701]">Match</span>
+          </div>
         </Link>
 
         {error ? (

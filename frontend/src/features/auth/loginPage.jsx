@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { loginWithEmail, signInWithGoogleTo } from "./auth.js";
 import { normalizeEmail } from "../../utils/normalize.js";
 import { Button, Card, Field, Input, buttonStyles } from "../../components/ui.jsx";
-import { LockIcon, LogoMark, MailIcon } from "../../components/icons.jsx";
+import { GoogleIcon, LockIcon, MailIcon } from "../../components/icons.jsx";
 import { resolveNextPath, withNextPath } from "../../utils/classMatch.js";
 import { useNotifications } from "../../contexts/NotificationsContext.jsx";
 
@@ -54,28 +54,21 @@ export default function LoginPage() {
         <Card className="motion-fade-up p-8 sm:p-10">
           <div className="space-y-6">
             <Link to="/" className="inline-flex items-center gap-3">
-              <LogoMark className="size-10 text-[var(--color-primary)]" />
-              <span className="text-base font-semibold text-slate-900">ClassMatch</span>
+              <div className="size-11 shrink-0 overflow-hidden rounded-xl">
+                <img
+                  src="/Classmatch-Icon.png"
+                  alt="ClassMatch"
+                  className="size-full scale-[1.2] object-contain"
+                />
+              </div>
+              <div className="text-xl font-bold tracking-tight sm:text-2xl">
+                <span className="text-white">Class</span>
+                <span className="text-[#fd8701]">Match</span>
+              </div>
             </Link>
             <div className="space-y-2">
               <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Log in</h1>
               <p className="text-sm leading-6 text-slate-500">Welcome back. Pick up where your schedule and groups left off.</p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={isGoogleLoading}
-              className={buttonStyles({ variant: "secondary", size: "lg", className: "w-full" })}
-            >
-              <span className="text-base font-bold text-[#4285F4]">G</span>
-              {isGoogleLoading ? "Redirecting to Google..." : "Continue with Google"}
-            </button>
-
-            <div className="flex items-center gap-3 text-xs text-slate-400">
-              <span className="h-px flex-1 bg-[var(--color-border)]" />
-              <span>or</span>
-              <span className="h-px flex-1 bg-[var(--color-border)]" />
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
@@ -109,10 +102,28 @@ export default function LoginPage() {
                 </div>
               </Field>
 
-              <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? "Logging in..." : "Log in"}
-              </Button>
+              <div className="pt-2">
+                <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
+                  {isSubmitting ? "Logging in..." : "Log in"}
+                </Button>
+              </div>
             </form>
+
+            <div className="flex items-center gap-3 text-xs text-slate-400">
+              <span className="h-px flex-1 bg-[var(--color-border)]" />
+              <span>or</span>
+              <span className="h-px flex-1 bg-[var(--color-border)]" />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={isGoogleLoading}
+              className={buttonStyles({ variant: "secondary", size: "lg", className: "w-full" })}
+            >
+              <GoogleIcon className="size-5" />
+              {isGoogleLoading ? "Redirecting to Google..." : "Continue with Google"}
+            </button>
 
             <Link to="/reset-password" className="block text-center text-sm font-medium text-[var(--color-primary)] transition hover:text-[var(--color-primary-hover)]">
               Forgot password?

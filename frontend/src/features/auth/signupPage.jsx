@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { signInWithGoogleTo, signUpWithEmail } from "./auth.js";
 import { normalizeEmail, normalizeName } from "../../utils/normalize.js";
 import { Button, Card, Field, Input, buttonStyles } from "../../components/ui.jsx";
-import { LockIcon, LogoMark, MailIcon, UserIcon } from "../../components/icons.jsx";
+import { GoogleIcon, LockIcon, MailIcon, UserIcon } from "../../components/icons.jsx";
 import { resolveNextPath, withNextPath } from "../../utils/classMatch.js";
 import { useNotifications } from "../../contexts/NotificationsContext.jsx";
 
@@ -71,28 +71,21 @@ export default function SignUpPage() {
         <Card className="motion-fade-up p-8 sm:p-10">
           <div className="space-y-6">
             <Link to="/" className="inline-flex items-center gap-3">
-              <LogoMark className="size-10 text-[var(--color-primary)]" />
-              <span className="text-base font-semibold text-slate-900">ClassMatch</span>
+              <div className="size-11 shrink-0 overflow-hidden rounded-xl">
+                <img
+                  src="/Classmatch-Icon.png"
+                  alt="ClassMatch"
+                  className="size-full scale-[1.2] object-contain"
+                />
+              </div>
+              <div className="text-xl font-bold tracking-tight sm:text-2xl">
+                <span className="text-white">Class</span>
+                <span className="text-[#fd8701]">Match</span>
+              </div>
             </Link>
             <div className="space-y-2">
               <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Create account</h1>
               <p className="text-sm leading-6 text-slate-500">Join ClassMatch and find your classmates.</p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleGoogleSignup}
-              disabled={isGoogleLoading}
-              className={buttonStyles({ variant: "secondary", size: "lg", className: "w-full" })}
-            >
-              <span className="text-base font-bold text-[#4285F4]">G</span>
-              {isGoogleLoading ? "Redirecting to Google..." : "Sign up with Google"}
-            </button>
-
-            <div className="flex items-center gap-3 text-xs text-slate-400">
-              <span className="h-px flex-1 bg-[var(--color-border)]" />
-              <span>or</span>
-              <span className="h-px flex-1 bg-[var(--color-border)]" />
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
@@ -156,10 +149,28 @@ export default function SignUpPage() {
                 </div>
               </Field>
 
-              <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? "Creating account..." : "Create account"}
-              </Button>
+              <div className="pt-2">
+                <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
+                  {isSubmitting ? "Creating account..." : "Create account"}
+                </Button>
+              </div>
             </form>
+
+            <div className="flex items-center gap-3 text-xs text-slate-400">
+              <span className="h-px flex-1 bg-[var(--color-border)]" />
+              <span>or</span>
+              <span className="h-px flex-1 bg-[var(--color-border)]" />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleSignup}
+              disabled={isGoogleLoading}
+              className={buttonStyles({ variant: "secondary", size: "lg", className: "w-full" })}
+            >
+              <GoogleIcon className="size-5" />
+              {isGoogleLoading ? "Redirecting to Google..." : "Sign up with Google"}
+            </button>
           </div>
         </Card>
         <p className="mt-6 text-center text-sm text-slate-500">

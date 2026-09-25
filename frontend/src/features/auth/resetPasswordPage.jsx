@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { requestPasswordReset, updatePassword } from "./auth.js";
 import useSession from "../../utils/useSession.js";
 import { Button, Card, Field, Input } from "../../components/ui.jsx";
-import { LockIcon, LogoMark, MailIcon } from "../../components/icons.jsx";
+import { LockIcon, MailIcon } from "../../components/icons.jsx";
 import { normalizeEmail } from "../../utils/normalize.js";
 import { useNotifications } from "../../contexts/NotificationsContext.jsx";
 
@@ -55,10 +55,16 @@ export default function ResetPasswordPage() {
       <Card className="motion-fade-up w-full p-8 sm:p-10">
         <div className="space-y-6">
           <Link to="/" className="inline-flex items-center gap-3">
-            <LogoMark className="size-10 text-[var(--color-primary)]" />
-            <div>
-              <div className="text-base font-semibold text-slate-900">ClassMatch</div>
-              <div className="text-sm text-slate-500">Password recovery</div>
+            <div className="size-11 shrink-0 overflow-hidden rounded-xl">
+              <img
+                src="/Classmatch-Icon.png"
+                alt="ClassMatch"
+                className="size-full scale-[1.2] object-contain"
+              />
+            </div>
+            <div className="text-xl font-bold tracking-tight sm:text-2xl">
+              <span className="text-white">Class</span>
+              <span className="text-[#fd8701]">Match</span>
             </div>
           </Link>
 
@@ -106,9 +112,11 @@ export default function ResetPasswordPage() {
                 </div>
               </Field>
 
-              <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? "Updating password..." : "Update password"}
-              </Button>
+              <div className="pt-2">
+                <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
+                  {isSubmitting ? "Updating password..." : "Update password"}
+                </Button>
+              </div>
             </form>
           ) : (
             <form className="space-y-4" onSubmit={handleRequestReset}>
@@ -127,9 +135,11 @@ export default function ResetPasswordPage() {
                 </div>
               </Field>
 
-              <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? "Sending link..." : "Send reset link"}
-              </Button>
+              <div className="pt-2">
+                <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
+                  {isSubmitting ? "Sending link..." : "Send reset link"}
+                </Button>
+              </div>
             </form>
           )}
 

@@ -49,10 +49,16 @@ export default function AppLayout() {
       <header className="sticky top-0 z-40 border-b border-white/70 bg-white/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <Link to="/mygroups" className="flex items-center gap-3">
-            <img src="/Classmatch-Icon.png" alt="ClassMatch" className="size-10 rounded-xl object-contain" />
+            <div className="size-11 shrink-0 overflow-hidden rounded-xl">
+              <img
+                src="/Classmatch-Icon.png"
+                alt="ClassMatch"
+                className="size-full scale-[1.2] object-contain"
+              />
+            </div>
             <div className="text-xl font-bold tracking-tight sm:text-2xl">
               <span className="text-white">Class</span>
-              <span className="text-[var(--color-primary)]">Match</span>
+              <span className="text-[#fd8701]">Match</span>
             </div>
           </Link>
 

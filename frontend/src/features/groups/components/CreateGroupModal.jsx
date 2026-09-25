@@ -82,7 +82,7 @@ export default function CreateGroupModal({ isOpen, onClose, onSubmit, isSubmitti
           />
         </Field>
 
-        <Field label="Joinability" hint={form.joinable ? "Anyone with the code can join" : "Only the owner can re-open it"}>
+        <Field label="Joinability" hint={form.joinable ? "Anyone with an invite link can join" : "Only the owner can re-open it"}>
           <Toggle
             checked={form.joinable}
             onChange={(joinable) => setForm((current) => ({ ...current, joinable }))}

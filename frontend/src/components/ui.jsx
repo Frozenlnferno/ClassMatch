@@ -12,10 +12,18 @@ function getAvatarGradient(name = "") {
   const hash = Array.from(String(name)).reduce((value, character) => (
     ((value << 5) - value + character.charCodeAt(0)) | 0
   ), 0);
-  const hue = Math.abs(hash) % 360;
-  const accentHue = (hue + 36) % 360;
+  const palettes = [
+    ["#f87171", "#dc2626"],
+    ["#fb923c", "#ea580c"],
+    ["#facc15", "#ca8a04"],
+    ["#4ade80", "#16a34a"],
+    ["#60a5fa", "#2563eb"],
+    ["#818cf8", "#4f46e5"],
+    ["#c084fc", "#9333ea"],
+  ];
+  const [start, end] = palettes[Math.abs(hash) % palettes.length];
 
-  return `linear-gradient(135deg, hsl(${hue}, 76%, 58%), hsl(${accentHue}, 68%, 38%))`;
+  return `linear-gradient(135deg, ${start}, ${end})`;
 }
 
 export function buttonStyles({ variant = "primary", size = "md", className = "" } = {}) {
@@ -187,7 +195,7 @@ export function DropdownSelector({
                   onClick={() => handleSelect(option)}
                   className={cn(
                     "flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors duration-150 focus:bg-cyan-50 focus:outline-none",
-                    isSelected ? "bg-indigo-50 text-[var(--color-primary)]" : "text-slate-700 hover:bg-cyan-50/70",
+                    isSelected ? "bg-indigo-50 text-[var(--color-primary)]" : "text-slate-700 hover:!bg-[var(--color-surface-secondary)] hover:!text-white",
                   )}
                 >
                   <span className="min-w-0">
@@ -411,7 +419,7 @@ export function Modal({ isOpen, onClose, title, description, children, actions, 
             <CloseIcon className="size-5" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        <div className="modal-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5">
           {children}
         </div>
         {actions ? (

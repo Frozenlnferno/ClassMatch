@@ -15,6 +15,7 @@
   --color-border: rgba(255, 255, 255, 0.08);
   --color-border-strong: rgba(255, 255, 255, 0.16);
   --color-avatar-separator: #345473;
+  --color-avatar-control-hover: #294968;
   --color-focus: #FF5F05;
   --color-success: #22c55e;
   --color-error: #ef4444;
@@ -66,6 +67,32 @@ body {
   color: var(--color-text-default);
 }
 
+.modal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-secondary) transparent;
+  scrollbar-gutter: stable;
+}
+
+.modal-scrollbar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.modal-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-scrollbar::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--color-surface-secondary);
+  background-clip: padding-box;
+}
+
+.modal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-avatar-control-hover);
+  background-clip: padding-box;
+}
+
 /* Group summaries are nested inside a panel and must read as the next surface level. */
 div.group-summary-card {
   background-color: var(--color-surface-raised);
@@ -74,6 +101,20 @@ div.group-summary-card {
 div.group-summary-card:hover {
   background-color: var(--color-surface-raised-hover);
   border-color: var(--color-border-strong);
+}
+
+.avatar-upload-control {
+  background-color: var(--color-surface-secondary);
+  border-color: var(--color-avatar-separator);
+  transition: transform var(--motion-duration-fast) var(--motion-ease-standard),
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.avatar-upload:hover .avatar-upload-control {
+  background-color: var(--color-avatar-control-hover);
+  border-color: var(--color-text-secondary);
+  transform: scale(1.08);
 }
 
 a {

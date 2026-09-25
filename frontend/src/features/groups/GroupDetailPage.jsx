@@ -26,12 +26,13 @@ import {
   LoadingState,
   buttonStyles,
 } from "../../components/ui.jsx";
-import { ArrowDownIcon, ArrowUpIcon, CopyIcon, TrashIcon } from "../../components/icons.jsx";
+import { ArrowDownIcon, ArrowUpIcon, CameraIcon, CopyIcon, TrashIcon } from "../../components/icons.jsx";
 import {
   buildInviteLink,
   canManageMember,
   copyText,
   formatCourseCode,
+  formatDate,
   formatRole,
   formatScheduleLabel,
   formatTimeRange,
@@ -86,6 +87,7 @@ export default function GroupDetailPage() {
   }, []);
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
   const [isSavingGroup, setIsSavingGroup] = useState(false);
+  const [isUploadingGroupIcon, setIsUploadingGroupIcon] = useState(false);
   const [isManagingInvite, setIsManagingInvite] = useState(false);
   const [busyMemberId, setBusyMemberId] = useState("");
   const [error, setError] = useState("");
@@ -259,6 +261,24 @@ export default function GroupDetailPage() {
     }
   }
 
+  async function handleGroupIconUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingGroupIcon(true);
+      setError("");
+      await uploadGroupIcon(groupId, file);
+      await refreshWorkspace();
+      setSuccess("Group icon updated.");
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Unable to upload group icon");
+    } finally {
+      setIsUploadingGroupIcon(false);
+      event.target.value = "";
+    }
+  }
+
   async function handleLeaveGroup() {
     try {
       setError("");
@@ -361,7 +381,26 @@ export default function GroupDetailPage() {
 
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
-            <Avatar src={group.group_icon_url} name={group.name} size="xl" />
+            {canEditGroup ? (
+              <label
+                className="avatar-upload relative inline-flex w-fit shrink-0 cursor-pointer"
+                aria-label={group.group_icon_url ? "Change group icon" : "Upload group icon"}
+              >
+                <Avatar src={group.group_icon_url} name={group.name} size="xl" />
+                <span className="avatar-upload-control pointer-events-none absolute -bottom-1 -right-1 inline-flex size-8 items-center justify-center rounded-full border-2 text-[var(--color-text-default)] shadow-sm">
+                  <CameraIcon className="size-4" />
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleGroupIconUpload}
+                  className="sr-only"
+                  disabled={isUploadingGroupIcon}
+                />
+              </label>
+            ) : (
+              <Avatar src={group.group_icon_url} name={group.name} size="xl" />
+            )}
             <div className="min-w-0 flex-1 space-y-2">
               <h1 className="truncate text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{group.name}</h1>
               <div className="flex flex-wrap gap-2">
@@ -369,6 +408,7 @@ export default function GroupDetailPage() {
                 <span className="inline-flex whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                   {group.member_count} members
                 </span>
+                <span className="text-sm text-slate-500">Created {formatDate(group.created_at)}</span>
               </div>
             </div>
           </div>
@@ -397,7 +437,7 @@ export default function GroupDetailPage() {
                         setIsGroupActionsOpen(false);
                         setIsEditOpen(true);
                       }}
-                      className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:!bg-[var(--color-card-hover)]"
+                      className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:!bg-[var(--color-surface-secondary)] hover:!text-white"
                     >
                       Edit group
                     </button>
@@ -408,7 +448,7 @@ export default function GroupDetailPage() {
                         setIsGroupActionsOpen(false);
                         setIsLeaveOpen(true);
                       }}
-                      className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-rose-600 transition hover:!bg-[var(--color-card-hover)]"
+                      className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-rose-600 transition hover:!bg-[var(--color-surface-secondary)] hover:!text-white"
                     >
                       Leave group
                     </button>

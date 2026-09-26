@@ -36,7 +36,7 @@ export default function InvitePage() {
 
   if (isSessionLoading) {
     return (
-      <div className="mx-auto flex min-h-screen max-w-xl items-center px-4 py-10 sm:px-6">
+      <div className="mx-auto flex min-h-screen max-w-xl items-center justify-center px-4 py-10 sm:px-6">
         <LoadingState title="Checking your session" description="Getting your invitation ready." />
       </div>
     );

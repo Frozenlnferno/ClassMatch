@@ -27,8 +27,8 @@ function App() {
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/signup" element={<SignUpPage />} />
                 <Route path="/login" element={<LoginPage />} />
-                <Route path="/reset-password" element={<ResetPasswordPage />} />
               </Route>
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/invite/:inviteCode" element={<InvitePage />} />
             </Route>
 

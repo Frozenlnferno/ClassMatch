@@ -50,7 +50,7 @@ export default function MemberProfileModal({
           </div>
           <div className="rounded-[28px] bg-slate-50 p-5">
             <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Bio</div>
-            <p className="mt-3 text-sm leading-7 text-slate-600">
+            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">
               {profile?.bio || "This member hasn't added a bio yet."}
             </p>
           </div>

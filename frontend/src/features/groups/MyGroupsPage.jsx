@@ -135,7 +135,7 @@ export default function MyGroupsPage() {
                         </div>
                       </div>
                     </div>
-                  <p className="line-clamp-2 min-h-10 text-sm leading-5 text-slate-500">
+                  <p className="line-clamp-2 min-h-10 whitespace-pre-line text-sm leading-5 text-slate-500">
                     {group.description || "No group description yet."}
                   </p>
                   <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">

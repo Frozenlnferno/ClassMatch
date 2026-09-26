@@ -7,6 +7,7 @@ const SessionContext = createContext(null);
 export function SessionProvider({ children }) {
   const [session, setSession] = useState(null);
   const [isSessionLoading, setIsSessionLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -20,9 +21,14 @@ export function SessionProvider({ children }) {
       setIsSessionLoading(false);
     });
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) return;
       setSession(nextSession ?? null);
+      if (event === "PASSWORD_RECOVERY") {
+        setIsPasswordRecovery(Boolean(nextSession));
+      } else if (event === "SIGNED_OUT") {
+        setIsPasswordRecovery(false);
+      }
       setIsSessionLoading(false);
     });
 
@@ -36,7 +42,9 @@ export function SessionProvider({ children }) {
     session,
     accessToken: session?.access_token ?? null,
     isSessionLoading,
-  }), [isSessionLoading, session]);
+    isPasswordRecovery,
+    clearPasswordRecovery: () => setIsPasswordRecovery(false),
+  }), [isPasswordRecovery, isSessionLoading, session]);
 
   return (
     <SessionContext.Provider value={value}>

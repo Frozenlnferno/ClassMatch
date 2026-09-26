@@ -461,7 +461,7 @@ export default function GroupDetailPage() {
 
         <div className="border-t border-[var(--color-border)] pt-5">
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Group bio</div>
-          <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+          <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600 sm:text-base">
             {displayedBio}
           </p>
           {shouldTruncateBio ? (

@@ -18,7 +18,7 @@ export default function KickMemberModal({ group, member, isOpen, onClose, onConf
       )}
     >
       <div className="flex items-center gap-4 rounded-2xl bg-slate-50 p-4">
-        <Avatar src={member?.avatar_url} name={member?.name} size="md" />
+        <Avatar src={member?.avatar_url} name={member?.name} size="md" className="shrink-0 !rounded-full" />
         <div className="min-w-0">
           <div className="truncate text-sm font-semibold text-slate-900">{member?.name || "Member"}</div>
           <div className="mt-1 text-sm text-slate-500">

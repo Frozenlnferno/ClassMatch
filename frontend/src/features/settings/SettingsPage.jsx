@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "../../contexts/ProfileContext.jsx";
 import { deleteUserAccount, removeUserAvatar, updateUserProfile, uploadUserAvatar } from "./settingsService.js";
-import { updatePassword, logout } from "../auth/auth.js";
+import { logout } from "../auth/auth.js";
 import { CameraIcon } from "../../components/icons.jsx";
 import {
   Avatar,
@@ -15,7 +15,6 @@ import {
 } from "../../components/ui.jsx";
 import EditProfileModal from "./components/EditProfileModal.jsx";
 import DeleteAccountModal from "./components/DeleteAccountModal.jsx";
-import ResetPasswordModal from "./components/ResetPasswordModal.jsx";
 import { useNotifications } from "../../contexts/NotificationsContext.jsx";
 import { getUserErrorMessage } from "../../utils/errorMessage.js";
 import useSession from "../../utils/useSession.js";
@@ -27,19 +26,17 @@ export default function SettingsPage() {
   const { notifyError, notifySuccess } = useNotifications();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const authProviders = session?.user?.app_metadata?.providers || [];
   const hasPasswordSignIn = Boolean(
-    session?.user?.identities?.some((identity) => identity.provider === "email") ||
-    authProviders.includes("email") ||
-    session?.user?.app_metadata?.provider === "email",
+    session?.user?.identities?.some((identity) => identity.provider === "email")
+      || authProviders.includes("email")
+      || session?.user?.app_metadata?.provider === "email",
   );
 
   useEffect(() => {
@@ -110,26 +107,6 @@ export default function SettingsPage() {
       setSuccess("Profile photo removed.");
     } finally {
       setIsUploadingAvatar(false);
-    }
-  }
-
-  async function handlePasswordUpdate(passwordForm) {
-    if (passwordForm.password !== passwordForm.confirmPassword) {
-      throw new Error("Passwords do not match.");
-    }
-
-    try {
-      setIsUpdatingPassword(true);
-      setError("");
-      setSuccess("");
-      await updatePassword(passwordForm.password);
-      setIsResetPasswordOpen(false);
-      setSuccess("Password updated.");
-    } catch (passwordError) {
-      setError(getUserErrorMessage(passwordError, "We couldn't update your password. Please try again."));
-      throw passwordError;
-    } finally {
-      setIsUpdatingPassword(false);
     }
   }
 
@@ -205,7 +182,7 @@ export default function SettingsPage() {
 
             <div className="border-t border-[var(--color-border)] pt-6">
               <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Bio</div>
-              <p className="mt-3 text-sm leading-7 text-slate-600">
+              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">
                 {profile?.bio || "Add a short bio so classmates know what you're studying or what you're interested in."}
               </p>
             </div>
@@ -217,10 +194,10 @@ export default function SettingsPage() {
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Security</div>
                   <div className="mt-3 text-lg font-semibold text-slate-900">Password</div>
-                  <div className="mt-1 text-sm text-slate-500">Update your password to keep your account secure.</div>
+                  <div className="mt-1 text-sm text-slate-500">Password changes require a secure recovery link sent to your email.</div>
                 </div>
-                <Button variant="secondary" onClick={() => setIsResetPasswordOpen(true)} className="shrink-0">
-                  Change password
+                <Button variant="secondary" onClick={() => navigate("/reset-password")} className="shrink-0">
+                  Reset via email
                 </Button>
               </div>
             </Card>
@@ -270,14 +247,6 @@ export default function SettingsPage() {
         onConfirm={handleDeleteAccount}
         isDeleting={isDeletingAccount}
       />
-      {hasPasswordSignIn ? (
-        <ResetPasswordModal
-          isOpen={isResetPasswordOpen}
-          onClose={() => setIsResetPasswordOpen(false)}
-          onSubmit={handlePasswordUpdate}
-          isSubmitting={isUpdatingPassword}
-        />
-      ) : null}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { requestPasswordReset, updatePassword } from "./auth.js";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { logout, requestPasswordReset, updatePassword } from "./auth.js";
 import useSession from "../../utils/useSession.js";
 import { Button, Card, Field, Input } from "../../components/ui.jsx";
 import { LockIcon, MailIcon } from "../../components/icons.jsx";
@@ -9,7 +9,8 @@ import { useNotifications } from "../../contexts/NotificationsContext.jsx";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
-  const { session } = useSession();
+  const location = useLocation();
+  const { clearPasswordRecovery, isPasswordRecovery } = useSession();
   const { notifyError, notifySuccess } = useNotifications();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,6 +42,8 @@ export default function ResetPasswordPage() {
     try {
       setIsSubmitting(true);
       await updatePassword(password);
+      clearPasswordRecovery();
+      await logout();
       notifySuccess("Success", "Password updated. You can log in with your new password now.");
       window.setTimeout(() => navigate("/login", { replace: true }), 1200);
     } catch (updateError) {
@@ -49,6 +52,12 @@ export default function ResetPasswordPage() {
       setIsSubmitting(false);
     }
   }
+
+  const recoveryErrorCode = new URLSearchParams(location.search).get("error_code")
+    || new URLSearchParams(location.hash.slice(1)).get("error_code");
+  const recoveryError = recoveryErrorCode
+    ? "That recovery link is invalid or has expired. Request a new one below."
+    : "";
 
   return (
     <div className="mx-auto flex min-h-screen max-w-3xl items-center px-4 py-10 sm:px-6 lg:px-8">
@@ -71,16 +80,18 @@ export default function ResetPasswordPage() {
           <div className="space-y-2">
             <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--color-primary)]">Reset password</div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-              {session ? "Choose a new password" : "Request a password reset link"}
+              {isPasswordRecovery ? "Choose a new password" : "Request a password reset link"}
             </h1>
             <p className="text-sm leading-6 text-slate-500">
-              {session
+              {isPasswordRecovery
                 ? "You can finish the reset here after opening the recovery link from your email."
-                : "Enter your account email and we'll send you a secure password reset link."}
+                : "Enter your account email and we'll send you a secure password reset link. Only a recovery link can open the password form."}
             </p>
           </div>
 
-          {session ? (
+          {recoveryError ? <p className="text-sm font-medium text-rose-600">{recoveryError}</p> : null}
+
+          {isPasswordRecovery ? (
             <form className="space-y-4" onSubmit={handlePasswordUpdate}>
               <Field label="New password">
                 <div className="relative">

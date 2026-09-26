@@ -355,6 +355,7 @@ def get_user_groups(uid):
                 SELECT
                 g.id,
                 g.name,
+                g.description,
                 gm.role,
                 (
                     SELECT COUNT(*)
@@ -375,10 +376,11 @@ def get_user_groups(uid):
         {
             "id": row[0],
             "name": row[1],
-            "role": row[2],
-            "member_count": row[3],
-            "joinable": row[4],
-            "group_icon_url": row[5],
+            "description": row[2],
+            "role": row[3],
+            "member_count": row[4],
+            "joinable": row[5],
+            "group_icon_url": row[6],
         }
         for row in rows
     ]

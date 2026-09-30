@@ -482,12 +482,15 @@ def resolve_courses_from_uiuc_partial(year, term, course_identifiers):
     return courses, skipped_courses
 
 
-def _persist_schedule_courses(uid, year, term, courses, replace_existing):
+def _persist_schedule_courses(uid, year, term, courses, replace_existing, cur=None):
     if not courses:
         raise ValueError("No valid courses were provided.")
 
-    with get_cursor() as cur:
-        cur.execute(
+    if cur is None:
+        with get_cursor() as transaction_cursor:
+            return _persist_schedule_courses(uid, year, term, courses, replace_existing, transaction_cursor)
+
+    cur.execute(
             """
                 INSERT INTO schedules (user_id, year, term)
                 VALUES (%s, %s, %s)
@@ -495,20 +498,20 @@ def _persist_schedule_courses(uid, year, term, courses, replace_existing):
                 RETURNING id
             """,
             (uid, year, term)
-        )
-        schedule_id = cur.fetchone()[0]
+    )
+    schedule_id = cur.fetchone()[0]
 
-        if replace_existing:
-            cur.execute(
+    if replace_existing:
+        cur.execute(
                 """
                     DELETE FROM schedule_sections
                     WHERE schedule_id = %s
                 """,
                 (schedule_id,)
-            )
+        )
 
-        for course in courses:
-            cur.execute(
+    for course in courses:
+        cur.execute(
                 """
                     INSERT INTO classes (subject, number, title)
                     VALUES (%s, %s, %s)
@@ -521,10 +524,10 @@ def _persist_schedule_courses(uid, year, term, courses, replace_existing):
                     course["Subject Number"],
                     course["Title"],
                 )
-            )
-            class_id = cur.fetchone()[0]
+        )
+        class_id = cur.fetchone()[0]
 
-            cur.execute(
+        cur.execute(
                 """
                     INSERT INTO sections (
                         class_id,
@@ -567,21 +570,21 @@ def _persist_schedule_courses(uid, year, term, courses, replace_existing):
                     course["End Time"],
                     course["Days of Week"],
                 )
-            )
-            section_id = cur.fetchone()[0]
+        )
+        section_id = cur.fetchone()[0]
 
-            cur.execute(
+        cur.execute(
                 """
                     INSERT INTO schedule_sections (schedule_id, section_id)
                     VALUES (%s, %s)
                     ON CONFLICT (schedule_id, section_id) DO NOTHING
                 """,
                 (schedule_id, section_id)
-            )
+        )
 
 
-def add_courses_by_ics(uid, year, term, courses):
-    _persist_schedule_courses(uid, year, term, courses, replace_existing=True)
+def add_courses_by_ics(uid, year, term, courses, cur=None):
+    _persist_schedule_courses(uid, year, term, courses, replace_existing=True, cur=cur)
 
 
 def add_courses_by_crn(uid, year, term, course_identifiers):
@@ -592,8 +595,8 @@ def add_courses_by_crn(uid, year, term, course_identifiers):
     _persist_schedule_courses(uid, year, term, courses, replace_existing=False)
     return courses
 
-def add_resolved_courses_by_crn(uid, year, term, courses):
-    _persist_schedule_courses(uid, year, term, courses, replace_existing=False)
+def add_resolved_courses_by_crn(uid, year, term, courses, cur=None):
+    _persist_schedule_courses(uid, year, term, courses, replace_existing=False, cur=cur)
     return courses
 
 

@@ -1,16 +1,19 @@
 import io
+import os
 import unittest
 from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
 import jwt
 from psycopg2 import DatabaseError, OperationalError
+from psycopg2 import pool
 from jwt.exceptions import InvalidTokenError
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from app import create_app
 from app.config import Config
 from app.jobs.schedule_imports import ScheduleImportWorker
+from app.jobs.queue import JOB_TYPE_CRN, PostgresJobQueue
 from app.routes.groups import groups_service
 from app.routes.users import users_service
 from app.routes.schedules.schedules_service import extract_schedule_identifiers_from_ics
@@ -133,26 +136,22 @@ class BackendRouteTestCase(unittest.TestCase):
             LOG_OPTIONS_REQUESTS=False,
             SUPABASE_SCHEDULE_ICS_BUCKET="schedule-ics",
             SUPABASE_SCHEDULE_ICS_PREFIX="schedule-imports",
-            REDIS_URL="redis://localhost:6379/0",
-            REDIS_JOB_LEASE_SECONDS=60,
-            REDIS_JOB_HEARTBEAT_SECONDS=20,
-            REDIS_JOB_MAX_ATTEMPTS=3,
-            REDIS_JOB_RETRY_BASE_DELAY_SECONDS=5,
-            REDIS_JOB_RESULT_TTL_SECONDS=86400,
-            REDIS_JOB_POLL_INTERVAL_SECONDS=0.01,
+            JOB_LEASE_SECONDS=60,
+            JOB_HEARTBEAT_SECONDS=20,
+            JOB_MAX_ATTEMPTS=3,
+            JOB_RETRY_BASE_DELAY_SECONDS=5,
+            JOB_RESULT_TTL_SECONDS=86400,
+            JOB_POLL_INTERVAL_SECONDS=0.01,
             JWKS_URL="http://127.0.0.1:54321/auth/v1/.well-known/jwks.json",
         )
         self.config_patcher.start()
         self.init_db_pool_patcher = patch("app.init_db_pool", return_value=None)
-        self.init_redis_patcher = patch("app.init_redis", return_value=None)
         self.init_db_pool_patcher.start()
-        self.init_redis_patcher.start()
         self.app = create_app()
         self.app.testing = True
         self.client = self.app.test_client()
 
     def tearDown(self):
-        self.init_redis_patcher.stop()
         self.init_db_pool_patcher.stop()
         self.config_patcher.stop()
 
@@ -451,9 +450,11 @@ class BackendServiceTestCase(unittest.TestCase):
             "app.jobs.schedule_imports.resolve_courses_from_uiuc_partial",
             return_value=(resolved_courses, skipped_courses),
         ), patch("app.jobs.schedule_imports.add_courses_by_ics") as add_courses:
-            result = worker._process_ics_job({"job_id": "job-1", "user_id": "user-1", "object_path": "path.ics"})
+            result, persist_schedule = worker._process_ics_job({"job_id": "job-1", "user_id": "user-1", "object_path": "path.ics"})
+            transaction_cursor = Mock()
+            persist_schedule(transaction_cursor)
 
-        add_courses.assert_called_once_with("user-1", 2026, "fall", resolved_courses)
+        add_courses.assert_called_once_with("user-1", 2026, "fall", resolved_courses, cur=transaction_cursor)
         self.assertEqual(result["saved_count"], 1)
         self.assertEqual(result["skipped_count"], 1)
         self.assertEqual(result["skipped_courses"], skipped_courses)
@@ -486,7 +487,7 @@ class BackendServiceTestCase(unittest.TestCase):
             "app.jobs.schedule_imports.resolve_courses_from_uiuc_partial",
             return_value=(resolved_courses, skipped_courses),
         ), patch("app.jobs.schedule_imports.add_resolved_courses_by_crn") as add_courses:
-            result = worker._process_crn_job(
+            result, persist_schedule = worker._process_crn_job(
                 {
                     "user_id": "user-1",
                     "year": 2026,
@@ -499,8 +500,10 @@ class BackendServiceTestCase(unittest.TestCase):
                     },
                 }
             )
+            transaction_cursor = Mock()
+            persist_schedule(transaction_cursor)
 
-        add_courses.assert_called_once_with("user-1", 2026, "fall", resolved_courses)
+        add_courses.assert_called_once_with("user-1", 2026, "fall", resolved_courses, cur=transaction_cursor)
         self.assertEqual(result["saved_count"], 1)
         self.assertEqual(result["skipped_count"], 1)
         self.assertEqual(result["skipped_courses"], skipped_courses)
@@ -597,17 +600,148 @@ class BackendConfigValidationTestCase(unittest.TestCase):
             LOG_OPTIONS_REQUESTS=False,
             SUPABASE_SCHEDULE_ICS_BUCKET="schedule-ics",
             SUPABASE_SCHEDULE_ICS_PREFIX="schedule-imports",
-            REDIS_URL="redis://localhost:6379/0",
-            REDIS_JOB_LEASE_SECONDS=60,
-            REDIS_JOB_HEARTBEAT_SECONDS=20,
-            REDIS_JOB_MAX_ATTEMPTS=3,
-            REDIS_JOB_RETRY_BASE_DELAY_SECONDS=5,
-            REDIS_JOB_RESULT_TTL_SECONDS=86400,
-            REDIS_JOB_POLL_INTERVAL_SECONDS=0.01,
+            JOB_LEASE_SECONDS=60,
+            JOB_HEARTBEAT_SECONDS=20,
+            JOB_MAX_ATTEMPTS=3,
+            JOB_RETRY_BASE_DELAY_SECONDS=5,
+            JOB_RESULT_TTL_SECONDS=86400,
+            JOB_POLL_INTERVAL_SECONDS=0.01,
             JWKS_URL="http://127.0.0.1:54321/auth/v1/.well-known/jwks.json",
         ):
             with self.assertRaises(RuntimeError):
                 create_app()
+
+
+@unittest.skipUnless(os.getenv("TEST_DATABASE_URL"), "requires TEST_DATABASE_URL")
+class PostgresQueueIntegrationTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import psycopg2
+
+        cls.database_url = os.environ["TEST_DATABASE_URL"]
+        connection = psycopg2.connect(cls.database_url)
+        try:
+            with connection.cursor() as cur:
+                cur.execute("CREATE TABLE IF NOT EXISTS public.users (id uuid PRIMARY KEY)")
+                migration_path = os.path.join(
+                    os.path.dirname(__file__), "..", "..", "supabase", "migrations",
+                    "20260929120000_add_postgres_jobs.sql",
+                )
+                with open(migration_path, encoding="utf-8") as migration_file:
+                    cur.execute(migration_file.read())
+            connection.commit()
+        finally:
+            connection.close()
+        db_utils.extensions.db_pool = pool.SimpleConnectionPool(1, 4, dsn=cls.database_url)
+
+    @classmethod
+    def tearDownClass(cls):
+        if db_utils.extensions.db_pool:
+            db_utils.extensions.db_pool.closeall()
+            db_utils.extensions.db_pool = None
+
+    def setUp(self):
+        with db_utils.get_cursor() as cur:
+            cur.execute("DELETE FROM schedule_import_jobs")
+            cur.execute("DELETE FROM public.users")
+
+    def _create_user(self, user_id):
+        with db_utils.get_cursor() as cur:
+            cur.execute("INSERT INTO public.users (id) VALUES (%s)", (user_id,))
+
+    def _enqueue(self, queue, user_id, year):
+        from uuid import uuid4
+
+        job_id = str(uuid4())
+        return queue.enqueue_job(job_id, {
+            "job_type": JOB_TYPE_CRN,
+            "user_id": user_id,
+            "year": year,
+            "term": "fall",
+            "max_attempts": 3,
+            "payload_json": '{"courses":[]}',
+        })
+
+    def test_workers_claim_distinct_jobs_and_stale_completion_cannot_persist(self):
+        from uuid import uuid4
+
+        queue = PostgresJobQueue()
+        user_id = str(uuid4())
+        self._create_user(user_id)
+        self._enqueue(queue, user_id, 2026)
+        self._enqueue(queue, user_id, 2027)
+
+        first = queue.claim_next_job("worker-a")
+        second = queue.claim_next_job("worker-b")
+        self.assertNotEqual(first["job_id"], second["job_id"])
+
+        lease = queue.build_lease(first)
+        with db_utils.get_cursor() as cur:
+            cur.execute("UPDATE schedule_import_jobs SET status = 'canceled' WHERE id = %s", (first["job_id"],))
+        persisted = []
+        status = queue.complete_with_schedule(lease, {"saved_count": 1}, lambda _cur: persisted.append(True))
+        self.assertEqual(status, "superseded")
+        self.assertEqual(persisted, [])
+
+    def test_enqueue_supersedes_active_job_and_expired_lease_retries(self):
+        from uuid import uuid4
+
+        queue = PostgresJobQueue()
+        user_id = str(uuid4())
+        self._create_user(user_id)
+        first = self._enqueue(queue, user_id, 2026)
+        second = self._enqueue(queue, user_id, 2026)
+        canceled = queue.get_job(first["job_id"])
+        self.assertEqual(canceled["status"], "canceled")
+        self.assertEqual(canceled["superseded_by"], second["job_id"])
+
+        claimed = queue.claim_next_job("worker-a")
+        with db_utils.get_cursor() as cur:
+            cur.execute(
+                "UPDATE schedule_import_jobs SET lease_expires_at = now() - interval '1 second' WHERE id = %s",
+                (claimed["job_id"],),
+            )
+        self.assertEqual(queue.reclaim_expired_jobs(), [claimed["job_id"]])
+        retried = queue.get_job(claimed["job_id"])
+        self.assertEqual(retried["status"], "queued")
+        self.assertEqual(retried["attempts"], 1)
+
+    def test_schedule_write_and_completion_roll_back_together(self):
+        from uuid import uuid4
+
+        queue = PostgresJobQueue()
+        user_id = str(uuid4())
+        self._create_user(user_id)
+        job = self._enqueue(queue, user_id, 2026)
+        claimed = queue.claim_next_job("worker-a")
+
+        def failing_persist(_cur):
+            raise RuntimeError("database write failed")
+
+        with self.assertRaisesRegex(RuntimeError, "database write failed"):
+            queue.complete_with_schedule(queue.build_lease(claimed), {"saved_count": 1}, failing_persist)
+        current = queue.get_job(job["job_id"])
+        self.assertEqual(current["status"], "processing")
+        self.assertIsNone(current["result"])
+
+    def test_terminal_jobs_are_removed_after_the_retention_period(self):
+        from uuid import uuid4
+
+        queue = PostgresJobQueue()
+        user_id = str(uuid4())
+        self._create_user(user_id)
+        job = self._enqueue(queue, user_id, 2026)
+        with db_utils.get_cursor() as cur:
+            cur.execute(
+                """
+                UPDATE schedule_import_jobs
+                SET status = 'completed', cleanup_after = now() - interval '1 second'
+                WHERE id = %s
+                """,
+                (job["job_id"],),
+            )
+        self.assertEqual([item["job_id"] for item in queue.cleanup_terminal_jobs()], [job["job_id"]])
+        self.assertIsNone(queue.get_job(job["job_id"]))
 
 
 if __name__ == "__main__":

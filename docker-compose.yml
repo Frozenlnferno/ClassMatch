@@ -1,14 +1,4 @@
 services:
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
   backend:
     build:
       context: ./backend
@@ -18,9 +8,6 @@ services:
       - "5000:5000"
     volumes:
       - ./backend:/app
-    depends_on:
-      redis:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=3)"]
       interval: 10s
@@ -48,9 +35,6 @@ services:
     command: ["python", "run_worker.py"]
     volumes:
       - ./backend:/app
-    depends_on:
-      redis:
-        condition: service_healthy
 
   frontend:
     build:

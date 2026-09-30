@@ -39,14 +39,6 @@ def _validate_positive_number(name: str, value, integer_only: bool = False):
         raise RuntimeError(f"{name} must be an integer")
 
 
-def _validate_redis_url(name: str, value: str | None):
-    if not value:
-        raise RuntimeError(f"Missing required environment variable: {name}")
-    parsed = urlparse(value)
-    if parsed.scheme not in {"redis", "rediss"} or not parsed.hostname:
-        raise RuntimeError(f"Invalid Redis URL configured for {name}")
-
-
 class Config:
     FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN")
     SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -65,13 +57,12 @@ class Config:
     DATABASE_URL = os.getenv("DATABASE_URL")
     DB_SSLMODE = os.getenv("DB_SSLMODE", "require")  # prod default
     LOG_OPTIONS_REQUESTS = _get_bool_env("LOG_OPTIONS_REQUESTS", False)
-    REDIS_URL = os.getenv("REDIS_URL")
-    REDIS_JOB_LEASE_SECONDS = int(os.getenv("REDIS_JOB_LEASE_SECONDS", "60"))
-    REDIS_JOB_HEARTBEAT_SECONDS = int(os.getenv("REDIS_JOB_HEARTBEAT_SECONDS", "20"))
-    REDIS_JOB_MAX_ATTEMPTS = int(os.getenv("REDIS_JOB_MAX_ATTEMPTS", "3"))
-    REDIS_JOB_RETRY_BASE_DELAY_SECONDS = int(os.getenv("REDIS_JOB_RETRY_BASE_DELAY_SECONDS", "5"))
-    REDIS_JOB_RESULT_TTL_SECONDS = int(os.getenv("REDIS_JOB_RESULT_TTL_SECONDS", str(24 * 60 * 60)))
-    REDIS_JOB_POLL_INTERVAL_SECONDS = float(os.getenv("REDIS_JOB_POLL_INTERVAL_SECONDS", "1"))
+    JOB_LEASE_SECONDS = int(os.getenv("JOB_LEASE_SECONDS", "60"))
+    JOB_HEARTBEAT_SECONDS = int(os.getenv("JOB_HEARTBEAT_SECONDS", "20"))
+    JOB_MAX_ATTEMPTS = int(os.getenv("JOB_MAX_ATTEMPTS", "3"))
+    JOB_RETRY_BASE_DELAY_SECONDS = int(os.getenv("JOB_RETRY_BASE_DELAY_SECONDS", "5"))
+    JOB_RESULT_TTL_SECONDS = int(os.getenv("JOB_RESULT_TTL_SECONDS", str(24 * 60 * 60)))
+    JOB_POLL_INTERVAL_SECONDS = float(os.getenv("JOB_POLL_INTERVAL_SECONDS", "1"))
     JWKS_URL = f"{SUPABASE_URL.rstrip('/')}/auth/v1/.well-known/jwks.json" if SUPABASE_URL else None
 
     @classmethod
@@ -89,8 +80,6 @@ class Config:
         _validate_http_url("SUPABASE_URL", cls.SUPABASE_URL)
         _validate_http_url("SUPABASE_JWT_ISSUER", cls.SUPABASE_JWT_ISSUER)
         _validate_database_url("DATABASE_URL", cls.DATABASE_URL)
-        _validate_redis_url("REDIS_URL", cls.REDIS_URL)
-
         if not cls.SUPABASE_SECRET_KEY:
             raise RuntimeError("Missing required environment variable: SUPABASE_SECRET_KEY")
         if not cls.SUPABASE_JWT_AUDIENCE:
@@ -105,8 +94,9 @@ class Config:
         _validate_positive_number("MAX_IMAGE_UPLOAD_BYTES", cls.MAX_IMAGE_UPLOAD_BYTES, integer_only=True)
         _validate_positive_number("MAX_ICS_UPLOAD_BYTES", cls.MAX_ICS_UPLOAD_BYTES, integer_only=True)
         _validate_positive_number("MAX_MANUAL_COURSES_PER_REQUEST", cls.MAX_MANUAL_COURSES_PER_REQUEST, integer_only=True)
-        _validate_positive_number("REDIS_JOB_LEASE_SECONDS", cls.REDIS_JOB_LEASE_SECONDS, integer_only=True)
-        _validate_positive_number("REDIS_JOB_HEARTBEAT_SECONDS", cls.REDIS_JOB_HEARTBEAT_SECONDS, integer_only=True)
-        _validate_positive_number("REDIS_JOB_MAX_ATTEMPTS", cls.REDIS_JOB_MAX_ATTEMPTS, integer_only=True)
-        _validate_positive_number("REDIS_JOB_RETRY_BASE_DELAY_SECONDS", cls.REDIS_JOB_RETRY_BASE_DELAY_SECONDS, integer_only=True)
-        _validate_positive_number("REDIS_JOB_RESULT_TTL_SECONDS", cls.REDIS_JOB_RESULT_TTL_SECONDS, integer_only=True)
+        _validate_positive_number("JOB_LEASE_SECONDS", cls.JOB_LEASE_SECONDS, integer_only=True)
+        _validate_positive_number("JOB_HEARTBEAT_SECONDS", cls.JOB_HEARTBEAT_SECONDS, integer_only=True)
+        _validate_positive_number("JOB_MAX_ATTEMPTS", cls.JOB_MAX_ATTEMPTS, integer_only=True)
+        _validate_positive_number("JOB_RETRY_BASE_DELAY_SECONDS", cls.JOB_RETRY_BASE_DELAY_SECONDS, integer_only=True)
+        _validate_positive_number("JOB_RESULT_TTL_SECONDS", cls.JOB_RESULT_TTL_SECONDS, integer_only=True)
+        _validate_positive_number("JOB_POLL_INTERVAL_SECONDS", cls.JOB_POLL_INTERVAL_SECONDS)

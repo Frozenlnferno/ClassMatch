@@ -1,13 +1,4 @@
 services:
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
   backend:
     image: ${DOCKERHUB_USERNAME}/classmatch-backend:${RELEASE_VERSION:?Set RELEASE_VERSION to the commit SHA to deploy}
     container_name: classmatch-backend
@@ -15,9 +6,6 @@ services:
     env_file: ./backend/.env
     expose:
       - "5000"
-    depends_on:
-      redis:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=3)"]
       interval: 10s
@@ -31,9 +19,6 @@ services:
     restart: unless-stopped
     env_file: ./backend/.env
     command: ["python", "run_worker.py"]
-    depends_on:
-      redis:
-        condition: service_healthy
 
   frontend:
     image: ${DOCKERHUB_USERNAME}/classmatch-frontend:${RELEASE_VERSION:?Set RELEASE_VERSION to the commit SHA to deploy}

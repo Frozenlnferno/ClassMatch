@@ -48,7 +48,7 @@ def configure_logging():
         )
     else:
         formatter = logging.Formatter(
-            "%(asctime)s | %(levelname)s | %(name)s | request_id=%(request_id)s | %(method)s %(endpoint)s | status=%(status_code)s | duration_ms=%(response_time_ms)s | %(message)s"
+            "%(asctime)s | %(levelname)s | %(name)s | request_id=%(request_id)s | %(method)s %(endpoint)s | status=%(status_code)s | duration_ms=%(response_time_ms)s | %(message)s | error=%(error)s"
         )
 
     stream_handler.setFormatter(formatter)

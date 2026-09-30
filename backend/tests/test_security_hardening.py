@@ -580,6 +580,22 @@ class BackendAuthValidationTestCase(unittest.TestCase):
             with self.assertRaises(InvalidTokenError):
                 verify_supabase_jwt(token)
 
+    def test_verify_supabase_jwt_accepts_local_hs256_token(self):
+        token = jwt.encode(
+            {
+                "sub": "user-1",
+                "iss": Config.SUPABASE_JWT_ISSUER,
+                "aud": Config.SUPABASE_JWT_AUDIENCE,
+                "exp": 4102444800,
+                "iat": 1704067200,
+            },
+            "local-jwt-secret",
+            algorithm="HS256",
+        )
+
+        with patch.object(Config, "SUPABASE_JWT_SECRET", "local-jwt-secret"):
+            self.assertEqual(verify_supabase_jwt(token)["sub"], "user-1")
+
 
 class BackendConfigValidationTestCase(unittest.TestCase):
     def test_create_app_fails_fast_when_frontend_origin_missing(self):

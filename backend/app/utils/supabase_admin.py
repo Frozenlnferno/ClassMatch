@@ -1,5 +1,5 @@
 from typing import Union
-from urllib.parse import unquote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 from httpx import Client as HttpxClient
 from httpx import Timeout
@@ -56,10 +56,10 @@ def upload_public_file(
             "upsert": "false",
         },
     )
-    public_url = bucket.get_public_url(object_path)
-    if not public_url:
-        raise RuntimeError("Failed to generate public URL for uploaded file")
-    return public_url
+    return (
+        f"{Config.SUPABASE_PUBLIC_URL.rstrip('/')}"
+        f"/storage/v1/object/public/{quote(bucket_name, safe='')}/{quote(object_path, safe='/')}"
+    )
 
 
 def upload_private_file(

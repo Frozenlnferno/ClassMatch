@@ -42,11 +42,16 @@ def _validate_positive_number(name: str, value, integer_only: bool = False):
 class Config:
     FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN")
     SUPABASE_URL = os.getenv("SUPABASE_URL")
+    # URL returned to browsers for public Storage objects. This can differ from
+    # SUPABASE_URL when the backend reaches local Supabase through Docker's host gateway.
+    SUPABASE_PUBLIC_URL = os.getenv("SUPABASE_PUBLIC_URL") or SUPABASE_URL
     SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY")
     SUPABASE_JWT_ISSUER = os.getenv("SUPABASE_JWT_ISSUER") or (
         f"{SUPABASE_URL.rstrip('/')}/auth/v1" if SUPABASE_URL else None
     )
     SUPABASE_JWT_AUDIENCE = os.getenv("SUPABASE_JWT_AUDIENCE", "authenticated")
+    # Local Supabase commonly signs access tokens with HS256. Hosted projects use JWKS keys.
+    SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
     SUPABASE_HTTP_TIMEOUT_SECONDS = float(os.getenv("SUPABASE_HTTP_TIMEOUT_SECONDS", "20"))
     SUPABASE_SCHEDULE_ICS_BUCKET = os.getenv("SUPABASE_SCHEDULE_ICS_BUCKET", "schedule-ics")
     SUPABASE_SCHEDULE_ICS_PREFIX = os.getenv("SUPABASE_SCHEDULE_ICS_PREFIX", "schedule-imports")
@@ -78,6 +83,7 @@ class Config:
     def validate(cls):
         _validate_http_url("FRONTEND_ORIGIN", cls.FRONTEND_ORIGIN)
         _validate_http_url("SUPABASE_URL", cls.SUPABASE_URL)
+        _validate_http_url("SUPABASE_PUBLIC_URL", cls.SUPABASE_PUBLIC_URL)
         _validate_http_url("SUPABASE_JWT_ISSUER", cls.SUPABASE_JWT_ISSUER)
         _validate_database_url("DATABASE_URL", cls.DATABASE_URL)
         if not cls.SUPABASE_SECRET_KEY:

@@ -3,7 +3,7 @@ services:
     image: ${DOCKERHUB_USERNAME}/classmatch-backend:${RELEASE_VERSION:?Set RELEASE_VERSION to the commit SHA to deploy}
     container_name: classmatch-backend
     restart: unless-stopped
-    env_file: ./backend/.env
+    env_file: ./backend/.env.production
     expose:
       - "5000"
     healthcheck:
@@ -17,7 +17,7 @@ services:
     image: ${DOCKERHUB_USERNAME}/classmatch-backend:${RELEASE_VERSION:?Set RELEASE_VERSION to the commit SHA to deploy}
     container_name: classmatch-worker
     restart: unless-stopped
-    env_file: ./backend/.env
+    env_file: ./backend/.env.production
     command: ["python", "run_worker.py"]
 
   frontend:

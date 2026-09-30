@@ -142,7 +142,12 @@ class PostgresJobQueue:
                     worker_id = %s, lease_token = %s, claimed_at = now(),
                     lease_expires_at = now() + (%s * interval '1 second'), updated_at = now()
                 FROM candidate WHERE job.id = candidate.id AND job.status = 'queued'
-                RETURNING {_JOB_COLUMNS}
+                RETURNING
+                    job.id, job.user_id, job.job_type, job.status, job.year, job.term,
+                    job.payload, job.object_path, job.original_filename, job.result,
+                    job.last_error, job.attempts, job.max_attempts, job.available_at,
+                    job.claimed_at, job.lease_token, job.lease_expires_at, job.worker_id,
+                    job.superseded_by, job.cleanup_after, job.created_at, job.updated_at
                 """,
                 (worker_id, str(lease_token), Config.JOB_LEASE_SECONDS),
             )

@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+!backend/.env.production.example
+!supabase/.env.example
 
 # Python
 __pycache__/

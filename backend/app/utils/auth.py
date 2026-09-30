@@ -3,7 +3,7 @@ from functools import wraps
 import jwt
 from flask import g, jsonify, request
 from jwt import PyJWKClient
-from jwt.exceptions import InvalidTokenError, PyJWKClientError
+from jwt.exceptions import InvalidTokenError, PyJWKClientError, PyJWTError
 
 from app.config import Config
 from app.utils.logger import get_logger
@@ -23,9 +23,31 @@ def _get_jwks_client():
 
 def verify_supabase_jwt(token: str):
     try:
+        algorithm = jwt.get_unverified_header(token).get("alg")
+    except PyJWTError as exc:
+        raise InvalidTokenError("Malformed token header") from exc
+
+    decode_options = {"require": ["exp", "iat", "sub", "aud", "iss"]}
+    if algorithm == "HS256":
+        if not Config.SUPABASE_JWT_SECRET:
+            raise InvalidTokenError("HS256 JWT verification is not configured")
+        return jwt.decode(
+            token,
+            Config.SUPABASE_JWT_SECRET,
+            algorithms=["HS256"],
+            audience=Config.SUPABASE_JWT_AUDIENCE,
+            issuer=Config.SUPABASE_JWT_ISSUER,
+            options=decode_options,
+            leeway=5,
+        )
+
+    if algorithm != "ES256":
+        raise InvalidTokenError("Unsupported JWT signing algorithm")
+
+    try:
         signing_key = _get_jwks_client().get_signing_key_from_jwt(token).key
     except PyJWKClientError as exc:
-        raise InvalidTokenError("Unable to resolve signing key for token") from exc
+        raise InvalidTokenError(f"Unable to resolve signing key for token: {exc}") from exc
 
     decoded = jwt.decode(
         token,
@@ -33,7 +55,7 @@ def verify_supabase_jwt(token: str):
         algorithms=["ES256"],
         audience=Config.SUPABASE_JWT_AUDIENCE,
         issuer=Config.SUPABASE_JWT_ISSUER,
-        options={"require": ["exp", "iat", "sub", "aud", "iss"]},
+        options=decode_options,
         leeway=5,
     )
     return decoded

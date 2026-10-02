@@ -16,6 +16,10 @@ COURSE_SUMMARY_RE = re.compile(r"\b([A-Z]{2,5})\s+([0-9]{3}[A-Z]?)\s+([A-Z0-9]+)
 CRN_RE = re.compile(r"\bCRN:\s*([0-9]{5})\b", re.IGNORECASE)
 
 
+class TransientCourseApiError(RuntimeError):
+    """A temporary UIUC API failure that should allow the job to retry."""
+
+
 def _normalize_text(value):
     return " ".join(value.split()) if value else ""
 
@@ -385,7 +389,7 @@ def _fetch_uiuc_course(year, term, identifier):
     try:
         response = requests.get(url, timeout=Config.UIUC_API_TIMEOUT_SECONDS)
     except requests.RequestException as exc:
-        raise ValueError(
+        raise TransientCourseApiError(
             f"Failed to reach the UIUC course API for {subject} {course_number} CRN {crn}: {exc}"
         ) from exc
 
@@ -394,15 +398,20 @@ def _fetch_uiuc_course(year, term, identifier):
             f"UIUC course not found for {subject} {course_number} CRN {crn} in {term} {year}."
         )
 
+    if response.status_code == 429 or response.status_code >= 500:
+        raise TransientCourseApiError(
+            f"UIUC course API request failed for {subject} {course_number} CRN {crn} with status {response.status_code}."
+        )
+
     if response.status_code != 200:
         raise ValueError(
-            f"UIUC course API request failed for {subject} {course_number} CRN {crn} with status {response.status_code}."
+            f"UIUC course not found for {subject} {course_number} CRN {crn} in {term} {year}."
         )
 
     try:
         root = ET.fromstring(response.content)
     except ET.ParseError as exc:
-        raise ValueError(
+        raise TransientCourseApiError(
             f"UIUC course API returned malformed XML for {subject} {course_number} CRN {crn}."
         ) from exc
 
@@ -482,12 +491,15 @@ def resolve_courses_from_uiuc_partial(year, term, course_identifiers):
     return courses, skipped_courses
 
 
-def _persist_schedule_courses(uid, year, term, courses, replace_existing):
+def _persist_schedule_courses(uid, year, term, courses, replace_existing, cur=None):
     if not courses:
         raise ValueError("No valid courses were provided.")
 
-    with get_cursor() as cur:
-        cur.execute(
+    if cur is None:
+        with get_cursor() as transaction_cursor:
+            return _persist_schedule_courses(uid, year, term, courses, replace_existing, transaction_cursor)
+
+    cur.execute(
             """
                 INSERT INTO schedules (user_id, year, term)
                 VALUES (%s, %s, %s)
@@ -495,20 +507,20 @@ def _persist_schedule_courses(uid, year, term, courses, replace_existing):
                 RETURNING id
             """,
             (uid, year, term)
-        )
-        schedule_id = cur.fetchone()[0]
+    )
+    schedule_id = cur.fetchone()[0]
 
-        if replace_existing:
-            cur.execute(
+    if replace_existing:
+        cur.execute(
                 """
                     DELETE FROM schedule_sections
                     WHERE schedule_id = %s
                 """,
                 (schedule_id,)
-            )
+        )
 
-        for course in courses:
-            cur.execute(
+    for course in courses:
+        cur.execute(
                 """
                     INSERT INTO classes (subject, number, title)
                     VALUES (%s, %s, %s)
@@ -521,10 +533,10 @@ def _persist_schedule_courses(uid, year, term, courses, replace_existing):
                     course["Subject Number"],
                     course["Title"],
                 )
-            )
-            class_id = cur.fetchone()[0]
+        )
+        class_id = cur.fetchone()[0]
 
-            cur.execute(
+        cur.execute(
                 """
                     INSERT INTO sections (
                         class_id,
@@ -567,21 +579,21 @@ def _persist_schedule_courses(uid, year, term, courses, replace_existing):
                     course["End Time"],
                     course["Days of Week"],
                 )
-            )
-            section_id = cur.fetchone()[0]
+        )
+        section_id = cur.fetchone()[0]
 
-            cur.execute(
+        cur.execute(
                 """
                     INSERT INTO schedule_sections (schedule_id, section_id)
                     VALUES (%s, %s)
                     ON CONFLICT (schedule_id, section_id) DO NOTHING
                 """,
                 (schedule_id, section_id)
-            )
+        )
 
 
-def add_courses_by_ics(uid, year, term, courses):
-    _persist_schedule_courses(uid, year, term, courses, replace_existing=True)
+def add_courses_by_ics(uid, year, term, courses, cur=None):
+    _persist_schedule_courses(uid, year, term, courses, replace_existing=True, cur=cur)
 
 
 def add_courses_by_crn(uid, year, term, course_identifiers):
@@ -592,8 +604,8 @@ def add_courses_by_crn(uid, year, term, course_identifiers):
     _persist_schedule_courses(uid, year, term, courses, replace_existing=False)
     return courses
 
-def add_resolved_courses_by_crn(uid, year, term, courses):
-    _persist_schedule_courses(uid, year, term, courses, replace_existing=False)
+def add_resolved_courses_by_crn(uid, year, term, courses, cur=None):
+    _persist_schedule_courses(uid, year, term, courses, replace_existing=False, cur=cur)
     return courses
 
 

@@ -1,26 +1,25 @@
 services:
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
   backend:
     build:
       context: ./backend
       target: dev
     env_file: ./backend/.env
+    environment:
+      # Docker containers must use the host gateway to reach `supabase start`.
+      SUPABASE_URL: http://host.docker.internal:54321
+      # Public Storage links are consumed by the host browser, not the container.
+      SUPABASE_PUBLIC_URL: http://127.0.0.1:54321
+      # Token claims use Supabase's browser-facing URL, even though the
+      # container reaches Supabase through host.docker.internal.
+      SUPABASE_JWT_ISSUER: http://127.0.0.1:54321/auth/v1
+      DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:54322/postgres
+      DB_SSLMODE: disable
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "5000:5000"
     volumes:
       - ./backend:/app
-    depends_on:
-      redis:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=3)"]
       interval: 10s
@@ -45,12 +44,17 @@ services:
       context: ./backend
       target: dev
     env_file: ./backend/.env
+    environment:
+      SUPABASE_URL: http://host.docker.internal:54321
+      SUPABASE_PUBLIC_URL: http://127.0.0.1:54321
+      SUPABASE_JWT_ISSUER: http://127.0.0.1:54321/auth/v1
+      DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:54322/postgres
+      DB_SSLMODE: disable
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: ["python", "run_worker.py"]
     volumes:
       - ./backend:/app
-    depends_on:
-      redis:
-        condition: service_healthy
 
   frontend:
     build:

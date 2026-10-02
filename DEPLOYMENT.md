@@ -41,7 +41,7 @@ DOCKERHUB_USERNAME=your-dockerhub-username
 RELEASE_VERSION=the-full-commit-sha-to-deploy
 ```
 
-Keep the Flask runtime secrets in `backend/.env`. Neither `.env` file should be committed.
+Keep production Flask runtime secrets in `backend/.env.production`, created from `backend/.env.production.example`. Neither file should be committed.
 
 Manual deployment remains available:
 
@@ -57,7 +57,7 @@ After both commit-SHA images are published, `deploy-production` runs locally on 
 
 ### 1. Prepare the production host
 
-Install Docker Engine, the Docker Compose plugin, Git, and `flock` (normally provided by `util-linux`). Check out this repository at `/opt/classmatch`, then configure `/opt/classmatch/.env` and `/opt/classmatch/backend/.env` as described above.
+Install Docker Engine, the Docker Compose plugin, Git, and `flock` (normally provided by `util-linux`). Check out this repository at `/opt/classmatch`, then configure `/opt/classmatch/.env` and `/opt/classmatch/backend/.env.production` as described above.
 
 Create a dedicated service account for the runner and grant it Docker access. Docker group membership is effectively root-level access, so keep the host restricted and the checkout owned by an administrator:
 
@@ -66,8 +66,8 @@ sudo useradd --create-home --shell /bin/bash classmatch-runner
 sudo usermod --append --groups docker classmatch-runner
 sudo chown -R root:root /opt/classmatch
 sudo chmod 0755 /opt/classmatch/deployment/deploy.sh
-sudo chown root:classmatch-runner /opt/classmatch/.env /opt/classmatch/backend/.env
-sudo chmod 0640 /opt/classmatch/.env /opt/classmatch/backend/.env
+sudo chown root:classmatch-runner /opt/classmatch/.env /opt/classmatch/backend/.env.production
+sudo chmod 0640 /opt/classmatch/.env /opt/classmatch/backend/.env.production
 ```
 
 If the Docker Hub repositories are private, authenticate Docker Hub for `classmatch-runner` on the production host. Create the deployment state directory for the same account:

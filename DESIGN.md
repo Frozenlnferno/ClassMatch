@@ -20,11 +20,10 @@ Browser
                                         |
                                         `-- /api/* ---> Flask API
                                                         |-- PostgreSQL
-                                                        |-- Redis
                                                         |-- Supabase Storage/Auth Admin
                                                         `-- UIUC Course Explorer
 
-Redis queue ---> Python schedule worker ---> PostgreSQL / Supabase Storage / UIUC API
+PostgreSQL jobs ---> Python schedule worker ---> PostgreSQL / Supabase Storage / UIUC API
 
 Spring Boot API ---> PostgreSQL / Supabase JWT verification
   (development and migration only; not in the production request path)
@@ -42,7 +41,7 @@ In production, the React application and API share one public origin. Nginx serv
 | Frontend server | Nginx | Serves the built single-page application, routes unknown paths to `index.html`, caches assets, and proxies `/api/*` |
 | Production API | Python 3.13, Flask 3, Gunicorn | Users, groups, schedules, authorization, matching queries, uploads, and job creation |
 | Schedule worker | Python using the same backend image | Claims and executes asynchronous ICS and manual-course import jobs |
-| Job queue | Redis 7 | Queued/processing job state, leases, retries, supersession, and short-lived results |
+| Job queue | PostgreSQL | Queued/processing job state, leases, retries, supersession, and short-lived results |
 | Primary database | PostgreSQL hosted through Supabase | Users, groups, memberships, schedules, classes, and sections |
 | Authentication | Supabase Auth | Email/password auth, Google OAuth, sessions, password recovery, JWT issuance, and auth-user lifecycle |
 | Object storage | Supabase Storage | Public profile/group images and temporary private ICS uploads |
@@ -96,7 +95,7 @@ The schedule import API is asynchronous because resolving a schedule can require
 User selects ICS file or manual courses
   -> Flask validates the request
   -> Flask stores the ICS temporarily when applicable
-  -> Flask enqueues a Redis job
+  -> Flask creates a PostgreSQL job
   -> API returns HTTP 202 and job_id
   -> Frontend polls GET /api/schedules/jobs/{job_id} every 1.5 seconds
   -> Worker claims the job with a lease
@@ -237,20 +236,13 @@ Important cascade behavior:
 
 The Supabase migration enables row-level security and grants browser clients limited self/member reads. The Flask and Spring backends use their configured PostgreSQL credentials and enforce application authorization in backend code.
 
-## 7. Redis Job Design
+## 7. PostgreSQL Job Design
 
-Redis currently stores four kinds of queue data:
-
-- `schedule_jobs:ready`: sorted set of jobs eligible to run.
-- `schedule_jobs:processing`: sorted set ordered by lease expiration.
-- `schedule_job:<jobId>`: hash containing metadata, state, payload, result, attempts, and lease information.
-- `schedule_jobs:latest:<user>:<year>:<term>:<type>`: pointer used to supersede an older equivalent job.
-
-Queue transitions are implemented as Lua scripts so enqueue, claim, heartbeat, completion, retry, and expired-lease recovery are atomic.
+`schedule_import_jobs` stores job metadata, state, payload, result, retry timing, leases, and supersession. Workers claim rows with `FOR UPDATE SKIP LOCKED`; enqueue uses a transaction-scoped advisory lock to atomically supersede an equivalent active job.
 
 The worker:
 
-1. Requeues expired processing jobs.
+1. Reclaims expired processing jobs.
 2. Claims the next ready job and obtains a lease token.
 3. Sends heartbeats while processing.
 4. Executes either an ICS or CRN import.
@@ -294,7 +286,6 @@ It parses the XML into class title, subject/number, section, CRN, course type, i
 | `frontend` | 3000 | Production-built frontend served by Nginx |
 | `backend` | 5000 | Flask development server with source bind-mounted |
 | `backend-java` | 8080 | Optional `migration` profile; its `SERVER_PORT` must match the Compose mapping |
-| `redis` | 6379 | Local Redis |
 | `worker` | None | Python worker using the backend source mount |
 
 The PostgreSQL database and Supabase services are external to this Compose project.
@@ -305,7 +296,6 @@ The PostgreSQL database and Supabase services are external to this Compose proje
 - Runs Nginx publicly on port 3000.
 - Exposes Flask only to the internal Compose network on port 5000.
 - Runs a separate worker container from the same backend image.
-- Runs Redis internally.
 - Does not currently run Spring Boot.
 
 ### CI/CD
@@ -333,7 +323,7 @@ Key Flask variables:
 - `FRONTEND_ORIGIN`
 - `DATABASE_URL`, `DB_SSLMODE`
 - `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, JWT issuer/audience
-- `REDIS_URL` and job lease/retry/TTL settings
+- Job lease/retry/TTL settings
 - UIUC timeout and upload/request limits
 - Storage bucket and prefix settings
 
@@ -351,7 +341,6 @@ Key Spring variables:
 - The Spring implementation is not yet API-compatible for the entire users domain and should not receive production traffic until its request/response contract matches the frontend.
 - Schedules and their worker should remain together during any incremental migration.
 - Nginx is already prepared for path-based migration by enabling a more-specific `/api/users` proxy before the general `/api/` rule.
-- Redis is used only for schedule jobs. It can later be retained, replaced by a PostgreSQL job table, or replaced by a maintained job framework without changing the frontend's `202 + job_id + polling` contract.
 
 ## 12. Source Map
 

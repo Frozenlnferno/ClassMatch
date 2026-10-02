@@ -12,7 +12,7 @@ from .routes.schedules import schedules_controller
 from .routes.groups import groups_controller
 from .routes.users import users_controller
 
-from .extensions import cors, init_db_pool, init_redis
+from .extensions import cors, init_db_pool
 from .config import Config
 from .utils.logger import configure_logging, get_logger
 
@@ -52,7 +52,6 @@ def create_app():
     
     # Initialize database pool
     init_db_pool()
-    init_redis()
 
     @app.before_request
     def _before_request():

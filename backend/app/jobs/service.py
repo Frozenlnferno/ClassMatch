@@ -4,8 +4,12 @@ import json
 from uuid import uuid4
 
 from app.config import Config
-from app.jobs.queue import JOB_TYPE_CRN, JOB_TYPE_ICS, RedisJobQueue
-from app.utils.supabase_admin import upload_private_file
+from app.jobs.queue import JOB_TYPE_CRN, JOB_TYPE_ICS, PostgresJobQueue
+from app.utils.logger import get_logger
+from app.utils.supabase_admin import delete_file, upload_private_file
+
+
+logger = get_logger(__name__)
 
 
 def _build_job_response(job: dict) -> dict:
@@ -30,42 +34,50 @@ def create_ics_import_job(user_id: str, ics_bytes: bytes, filename: str, content
     object_path = Config.build_schedule_ics_object_path(user_id, filename, job_id)
     upload_private_file(object_path, ics_bytes, content_type, Config.SUPABASE_SCHEDULE_ICS_BUCKET)
 
-    queue = RedisJobQueue()
+    queue = PostgresJobQueue()
     metadata = {
         "job_type": JOB_TYPE_ICS,
         "user_id": user_id,
-        "year": 0,
-        "term": "pending",
-        "max_attempts": Config.REDIS_JOB_MAX_ATTEMPTS,
+        "year": None,
+        "term": None,
+        "max_attempts": Config.JOB_MAX_ATTEMPTS,
         "payload_json": "",
         "object_path": object_path,
         "original_filename": filename or "schedule.ics",
     }
-    queue.enqueue_job(job_id, metadata)
-    job = queue.get_job(job_id)
+    try:
+        job = queue.enqueue_job(job_id, metadata)
+    except Exception:
+        try:
+            delete_file(object_path, Config.SUPABASE_SCHEDULE_ICS_BUCKET)
+        except Exception as cleanup_error:
+            logger.exception(
+                "Failed to clean up schedule upload after enqueue failure",
+                extra={"job_id": job_id, "object_path": object_path, "error": str(cleanup_error)},
+            )
+        raise
     return _build_job_response(job)
 
 
 def create_crn_import_job(user_id: str, year: int, term: str, courses: list[dict]) -> dict:
     job_id = str(uuid4())
-    queue = RedisJobQueue()
+    queue = PostgresJobQueue()
     metadata = {
         "job_type": JOB_TYPE_CRN,
         "user_id": user_id,
         "year": year,
         "term": term,
-        "max_attempts": Config.REDIS_JOB_MAX_ATTEMPTS,
+        "max_attempts": Config.JOB_MAX_ATTEMPTS,
         "payload_json": json.dumps({"courses": courses}, separators=(",", ":"), sort_keys=True),
         "object_path": "",
         "original_filename": "",
     }
-    queue.enqueue_job(job_id, metadata)
-    job = queue.get_job(job_id)
+    job = queue.enqueue_job(job_id, metadata)
     return _build_job_response(job)
 
 
 def get_job_status_for_user(job_id: str, user_id: str) -> dict | None:
-    queue = RedisJobQueue()
+    queue = PostgresJobQueue()
     job = queue.get_job(job_id)
     if not job or job.get("user_id") != user_id:
         return None

@@ -1,4 +1,5 @@
 import math
+import re
 
 from flask import request, jsonify, g, Blueprint
 from app.config import Config
@@ -17,6 +18,10 @@ from app.utils.validators import validate_year_term
 
 bp = Blueprint("schedules", __name__)
 logger = get_logger(__name__)
+SUBJECT_CODE_RE = re.compile(r"^[A-Z]{2,5}$")
+COURSE_NUMBER_RE = re.compile(r"^[0-9]{3}$")
+
+
 def _format_size_limit(max_bytes):
     if max_bytes < 1024 * 1024:
         return f"{max_bytes} bytes"
@@ -117,8 +122,15 @@ def add_schedule_courses():
         course_number = str(raw_number).strip()
         crn = str(raw_crn).strip()
 
-        if not subject or not course_number or len(crn) != 5 or not crn.isdigit():
-            return jsonify({"error": "Each course must include valid subject, course, and 5-digit crn"}), 400
+        if (
+            not SUBJECT_CODE_RE.fullmatch(subject)
+            or not COURSE_NUMBER_RE.fullmatch(course_number)
+            or len(crn) != 5
+            or not crn.isdigit()
+        ):
+            return jsonify({
+                "error": "Each course must include a 2-5 letter subject, 3-digit course number, and 5-digit CRN"
+            }), 400
 
         identifier = {
             "Subject": subject,

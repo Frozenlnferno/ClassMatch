@@ -46,22 +46,22 @@ export default function MemberProfileModal({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-[24px] bg-slate-50 p-5">
-              <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-700">Joined ClassMatch</div>
+              <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-900">Joined ClassMatch</div>
               <div className="mt-2 text-lg font-semibold text-slate-900">{formatDate(profile?.created_at)}</div>
             </div>
             <div className="rounded-[24px] bg-slate-50 p-5">
-              <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-700">Joined group</div>
+              <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-900">Joined group</div>
               <div className="mt-2 text-lg font-semibold text-slate-900">{formatDate(member?.joined_at)}</div>
             </div>
           </div>
           <div className="rounded-[28px] bg-slate-50 p-5">
-            <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-700">Bio</div>
+            <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-900">Bio</div>
             <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">
               {profile?.bio || "This member hasn't added a bio yet."}
             </p>
           </div>
           <div className="rounded-[28px] bg-slate-50 p-5">
-            <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-700">Schedule uploads</div>
+            <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-900">Schedule uploads</div>
             {scheduleTerms.length ? (
               <div className="mt-3 flex flex-wrap gap-2" aria-label="Uploaded schedule terms">
                 {scheduleTerms.map((schedule) => {

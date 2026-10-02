@@ -40,7 +40,7 @@ export default function MemberProfileModal({
           <div className="flex items-center gap-4">
             <Avatar src={profile?.avatar_url || member?.avatar_url} name={profile?.name || member?.name} size="xl" />
             <div>
-              <div className="text-2xl font-semibold text-slate-900">{profile?.name || member?.name}</div>
+              <div className="text-2xl font-semibold text-[var(--color-text-card)]">{profile?.name || member?.name}</div>
               <div className="mt-1 text-sm text-slate-500">{formatRole(member?.role)}</div>
             </div>
           </div>

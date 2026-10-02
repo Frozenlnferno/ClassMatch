@@ -175,7 +175,7 @@ export function DropdownSelector({
           id={listboxId}
           role="listbox"
           aria-label={label}
-          className="absolute z-30 max-h-80 w-full overflow-y-auto rounded-b-2xl border border-t-0 border-[var(--color-primary)] bg-white py-1 shadow-[0_22px_40px_-24px_var(--color-shadow)]"
+          className="modal-scrollbar absolute z-30 max-h-80 w-full overflow-y-auto rounded-b-2xl border border-t-0 border-[var(--color-primary)] bg-white py-1 shadow-[0_22px_40px_-24px_var(--color-shadow)]"
         >
           {options.map((option, index) => {
             const isSelected = String(option.value) === String(value);
@@ -194,7 +194,7 @@ export function DropdownSelector({
                   aria-selected={isSelected}
                   onClick={() => handleSelect(option)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors duration-150 focus:bg-cyan-50 focus:outline-none",
+                    "dropdown-selector-option flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors duration-150 focus:outline-none",
                     isSelected ? "bg-indigo-50 text-[var(--color-primary)]" : "text-slate-700 hover:!bg-[var(--color-surface-secondary)] hover:!text-white",
                   )}
                 >
@@ -407,7 +407,7 @@ export function Modal({ isOpen, onClose, title, description, children, actions, 
       >
         <div className="flex flex-none items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
           <div className="space-y-1">
-            <h2 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h2>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h2>
             {description ? <p className="text-sm leading-6 text-slate-500">{description}</p> : null}
           </div>
           <button

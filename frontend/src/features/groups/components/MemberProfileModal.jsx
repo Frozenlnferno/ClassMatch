@@ -5,7 +5,11 @@ import {
   LoadingState,
   Modal,
 } from "../../../components/ui.jsx";
-import { formatDate, formatRole } from "../../../utils/classMatch.js";
+import {
+  formatCompactScheduleLabel,
+  formatDate,
+  formatRole,
+} from "../../../utils/classMatch.js";
 
 export default function MemberProfileModal({
   member,
@@ -15,6 +19,8 @@ export default function MemberProfileModal({
   error,
   onClose,
 }) {
+  const scheduleTerms = member?.schedule_terms || [];
+
   return (
     <Modal
       isOpen={isOpen}
@@ -40,19 +46,39 @@ export default function MemberProfileModal({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-[24px] bg-slate-50 p-5">
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Joined ClassMatch</div>
+              <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-700">Joined ClassMatch</div>
               <div className="mt-2 text-lg font-semibold text-slate-900">{formatDate(profile?.created_at)}</div>
             </div>
             <div className="rounded-[24px] bg-slate-50 p-5">
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Joined group</div>
+              <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-700">Joined group</div>
               <div className="mt-2 text-lg font-semibold text-slate-900">{formatDate(member?.joined_at)}</div>
             </div>
           </div>
           <div className="rounded-[28px] bg-slate-50 p-5">
-            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Bio</div>
+            <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-700">Bio</div>
             <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">
               {profile?.bio || "This member hasn't added a bio yet."}
             </p>
+          </div>
+          <div className="rounded-[28px] bg-slate-50 p-5">
+            <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-700">Schedule uploads</div>
+            {scheduleTerms.length ? (
+              <div className="mt-3 flex flex-wrap gap-2" aria-label="Uploaded schedule terms">
+                {scheduleTerms.map((schedule) => {
+                  const scheduleKey = `${schedule.year}:${schedule.term}`;
+                  return (
+                    <span
+                      key={scheduleKey}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500"
+                    >
+                      {formatCompactScheduleLabel(schedule)}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-slate-600">No schedules yet.</p>
+            )}
           </div>
         </div>
       )}

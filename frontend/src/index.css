@@ -350,3 +350,21 @@ select {
     transform: none !important;
   }
 }
+
+.member-action-menu .member-action-menu-item:hover,
+.member-action-menu .member-action-menu-item:focus-visible {
+  background-color: var(--color-surface-secondary) !important;
+  color: var(--color-text-default) !important;
+}
+
+.member-action-menu .member-action-menu-item-danger:hover,
+.member-action-menu .member-action-menu-item-danger:focus-visible {
+  background-color: #dc2626 !important;
+  color: #ffffff !important;
+}
+
+.dropdown-selector-option:hover,
+.dropdown-selector-option:focus-visible {
+  background-color: var(--color-surface-secondary) !important;
+  color: var(--color-text-default) !important;
+}

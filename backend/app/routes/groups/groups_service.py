@@ -454,26 +454,45 @@ def get_group_members(requester_uid, group_id):
         _assert_group_member(cur, requester_uid, group_id)
         cur.execute(
             """
-                SELECT u.id, u.name, gm.role, gm.joined_at, u.avatar_url
+                SELECT u.id, u.name, gm.role, gm.joined_at, u.avatar_url, s.year, s.term
                 FROM users u
                 JOIN group_members gm ON u.id = gm.user_id
+                LEFT JOIN schedules s ON s.user_id = u.id
                 WHERE gm.group_id = %s
-                ORDER BY gm.joined_at ASC;
+                ORDER BY
+                    gm.joined_at ASC,
+                    s.year DESC NULLS LAST,
+                    CASE LOWER(s.term)
+                        WHEN 'fall' THEN 3
+                        WHEN 'summer' THEN 2
+                        WHEN 'spring' THEN 1
+                        ELSE 0
+                    END DESC;
             """,
             (group_id,)
         )
         rows = cur.fetchall() or []
 
-    return [
-        {
-            "user_id": row[0],
-            "name": row[1],
-            "role": row[2],
-            "joined_at": row[3].isoformat().replace("+00:00", "Z") if row[3] else None,
-            "avatar_url": row[4],
-        }
-        for row in rows
-    ]
+    members_by_id = {}
+    for row in rows:
+        user_id = row[0]
+        if user_id not in members_by_id:
+            members_by_id[user_id] = {
+                "user_id": user_id,
+                "name": row[1],
+                "role": row[2],
+                "joined_at": row[3].isoformat().replace("+00:00", "Z") if row[3] else None,
+                "avatar_url": row[4],
+                "schedule_terms": [],
+            }
+
+        if row[5] is not None and row[6] is not None:
+            members_by_id[user_id]["schedule_terms"].append({
+                "year": row[5],
+                "term": row[6],
+            })
+
+    return list(members_by_id.values())
 
 
 def change_group_role(admin_uid, member_uid, group_id, new_role):

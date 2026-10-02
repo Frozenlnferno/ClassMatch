@@ -20,19 +20,19 @@ export default function ClassDetailsModal({ course, isOpen, onClose }) {
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-[24px] bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Section</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Section</div>
               <div className="mt-2 text-base font-semibold text-slate-900">{course.section || "TBA"}</div>
             </div>
             <div className="rounded-[24px] bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">CRN</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-slate-500">CRN</div>
               <div className="mt-2 text-base font-semibold text-slate-900">{course.crn}</div>
             </div>
             <div className="rounded-[24px] bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Type</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Type</div>
               <div className="mt-2 text-base font-semibold text-slate-900">{course.courseType || "Not listed"}</div>
             </div>
             <div className="rounded-[24px] bg-slate-50 p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Meeting</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Meeting</div>
               <div className="mt-2 text-base font-semibold text-slate-900">{formatTimeRange(course.startTime, course.endTime)}</div>
               <div className="text-xs text-slate-400">{course.daysOfWeek || "Days arranged"}</div>
             </div>

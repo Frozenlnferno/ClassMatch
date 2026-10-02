@@ -1,6 +1,7 @@
 import io
 import os
 import unittest
+from datetime import datetime, timezone
 from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
@@ -644,6 +645,48 @@ class BackendServiceTestCase(unittest.TestCase):
         self.assertEqual(len(fake_cursor.calls), 2)
         self.assertEqual(fake_cursor.calls[0][1], ("12", "admin-user"))
         self.assertEqual(fake_cursor.calls[1][1], ("12", "owner-user"))
+
+    def test_group_members_include_ordered_schedule_terms_without_course_data(self):
+        fake_cursor = _FakeCursor(
+            fetchone_values=[(1,)],
+            fetchall_values=[[
+                ("user-1", "Alex", "member", datetime(2026, 1, 1, tzinfo=timezone.utc), None, 2027, "spring"),
+                ("user-1", "Alex", "member", datetime(2026, 1, 1, tzinfo=timezone.utc), None, 2026, "fall"),
+                ("user-2", "Blair", "admin", datetime(2026, 1, 2, tzinfo=timezone.utc), None, None, None),
+            ]],
+        )
+
+        @contextmanager
+        def fake_get_cursor():
+            yield fake_cursor
+
+        with patch("app.routes.groups.groups_service.get_cursor", fake_get_cursor):
+            members = groups_service.get_group_members("requester", "12")
+
+        self.assertEqual(members, [
+            {
+                "user_id": "user-1",
+                "name": "Alex",
+                "role": "member",
+                "joined_at": "2026-01-01T00:00:00Z",
+                "avatar_url": None,
+                "schedule_terms": [
+                    {"year": 2027, "term": "spring"},
+                    {"year": 2026, "term": "fall"},
+                ],
+            },
+            {
+                "user_id": "user-2",
+                "name": "Blair",
+                "role": "admin",
+                "joined_at": "2026-01-02T00:00:00Z",
+                "avatar_url": None,
+                "schedule_terms": [],
+            },
+        ])
+        member_query = fake_cursor.calls[1][0]
+        self.assertIn("LEFT JOIN schedules", member_query)
+        self.assertNotIn("schedule_sections", member_query)
 
     def test_ics_job_returns_partial_success_payload(self):
         queue = Mock()

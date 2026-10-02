@@ -70,6 +70,16 @@ export function formatScheduleLabel(schedule) {
   return `${formatTerm(schedule.term)} ${schedule.year}`;
 }
 
+export function formatCompactScheduleLabel(schedule) {
+  const termAbbreviation = {
+    fall: "F",
+    spring: "Sp",
+    summer: "Su",
+  }[String(schedule.term || "").toLowerCase()] || formatTerm(schedule.term).charAt(0).toUpperCase();
+  const shortYear = String(schedule.year).slice(-2);
+  return `${termAbbreviation}${shortYear}`;
+}
+
 export function formatRole(role) {
   if (!role) return "Member";
 

@@ -32,11 +32,11 @@ export default function LandingPage() {
           </div>
         </Link>
 
-        <nav className="flex items-center gap-3">
-          <Link to="/login" className={buttonStyles({ variant: "ghost", size: "md" })}>
+        <nav className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+          <Link to="/login" className={buttonStyles({ variant: "ghost", size: "md", className: "shrink-0 whitespace-nowrap px-3 sm:px-4" })}>
             Log in
           </Link>
-          <Link to="/signup" className={buttonStyles({ variant: "primary", size: "md" })}>
+          <Link to="/signup" className={buttonStyles({ variant: "primary", size: "md", className: "shrink-0 whitespace-nowrap px-3 sm:px-4" })}>
             Sign up
           </Link>
         </nav>

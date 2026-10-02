@@ -26,7 +26,7 @@ import {
   LoadingState,
   buttonStyles,
 } from "../../components/ui.jsx";
-import { ArrowDownIcon, ArrowUpIcon, CameraIcon, CopyIcon, TrashIcon } from "../../components/icons.jsx";
+import { CameraIcon, CopyIcon } from "../../components/icons.jsx";
 import {
   buildInviteLink,
   canManageMember,
@@ -43,6 +43,7 @@ import {
 } from "../../utils/classMatch.js";
 import GroupSchedulePicker from "./components/GroupSchedulePicker.jsx";
 import MemberProfileModal from "./components/MemberProfileModal.jsx";
+import MemberScheduleStatus from "./components/MemberScheduleStatus.jsx";
 import ClassDetailsModal from "./components/ClassDetailsModal.jsx";
 import EditGroupModal from "./components/EditGroupModal.jsx";
 import KickMemberModal from "./components/KickMemberModal.jsx";
@@ -70,6 +71,7 @@ export default function GroupDetailPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
   const [isGroupActionsOpen, setIsGroupActionsOpen] = useState(false);
+  const [openMemberActionsId, setOpenMemberActionsId] = useState("");
   const [isBioExpanded, setIsBioExpanded] = useState(false);
   const [areAllMembersVisible, setAreAllMembersVisible] = useState(false);
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true);
@@ -477,13 +479,14 @@ export default function GroupDetailPage() {
       </Card>
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <Card className="motion-fade-up motion-delay-1 space-y-5">
+        <Card className={`motion-fade-up motion-delay-1 space-y-5 ${openMemberActionsId ? "relative z-50" : ""}`}>
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-lg font-semibold text-slate-900">Members</div>
-              <div className="mt-1 text-sm text-slate-500">See who is in the group and manage roles where your permissions allow it.</div>
             </div>
-            <Badge tone="blue">{members.length} members</Badge>
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <Badge tone="blue">{members.length} members</Badge>
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -498,82 +501,106 @@ export default function GroupDetailPage() {
                   key={member.user_id}
                   role="button"
                   tabIndex={0}
+                  aria-label={`Open ${member.name}'s profile`}
                   onClick={() => setSelectedMember(member)}
                   onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget) return;
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
                       setSelectedMember(member);
                     }
                   }}
                   className={[
-                    "motion-lift w-full rounded-[var(--radius-card)] border border-[var(--color-border)] bg-slate-50/70 p-4 text-left transition-[transform,border-color,background-color,box-shadow] duration-200 hover:border-cyan-300 hover:bg-cyan-50/40",
+                    "w-full cursor-pointer rounded-[var(--radius-card)] border border-[var(--color-border)] bg-slate-50/70 p-4 transition hover:border-cyan-300 hover:bg-cyan-50/40 focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)]",
                     index >= 5 && !areAllMembersVisible ? "hidden xl:block" : "",
                   ].filter(Boolean).join(" ")}
                 >
-                  <div
-                    className={[
-                      "flex items-center gap-3",
-                      hasMemberActions ? "justify-between" : "",
-                    ].filter(Boolean).join(" ")}
-                  >
-                    <div className="flex min-w-0 items-center gap-4">
-                      <Avatar src={member.avatar_url} name={member.name} size="md" />
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-slate-900">{member.name}</div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {formatRole(member.role)}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedMember(member);
+                        }}
+                        className="flex min-w-0 items-center gap-4 rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)]"
+                        aria-label={`Open ${member.name}'s profile`}
+                      >
+                        <Avatar src={member.avatar_url} name={member.name} size="md" />
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-slate-900">{member.name}</div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            {formatRole(member.role)}
+                          </div>
                         </div>
-                      </div>
+                      </button>
                     </div>
-                    {hasMemberActions ? (
-                      <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
+                      <MemberScheduleStatus member={member} selectedSchedule={selectedSchedule} />
+                      {hasMemberActions ? (
+                        <div className="relative">
+                          <button
+                            type="button"
+                            aria-label={`Member actions for ${member.name}`}
+                            aria-expanded={openMemberActionsId === member.user_id}
+                            aria-haspopup="menu"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setOpenMemberActionsId((current) => current === member.user_id ? "" : member.user_id);
+                            }}
+                            className="motion-lift inline-flex size-8 items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-border-strong)] bg-white text-lg font-bold leading-none text-slate-600 transition hover:border-[var(--color-focus)] hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)]"
+                          >
+                            <span aria-hidden="true">•••</span>
+                          </button>
+                          {openMemberActionsId === member.user_id ? (
+                            <div role="menu" onClick={(event) => event.stopPropagation()} className="member-action-menu motion-scale-in absolute right-0 top-[calc(100%+0.5rem)] z-20 w-40 rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-xl">
                         {canPromote ? (
                           <button
                             type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
+                            onClick={() => {
+                              setOpenMemberActionsId("");
                               handleRoleChange(member, "admin");
                             }}
                             disabled={busyMemberId === member.user_id}
-                            aria-label={`Promote ${member.name} to admin`}
-                            className="motion-lift inline-flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--color-primary)] text-xs font-semibold text-white transition-[transform,background-color,box-shadow] duration-200 hover:bg-[var(--color-primary-hover)] disabled:opacity-60 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-3 sm:py-2"
+                            role="menuitem"
+                            className="member-action-menu-item w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] disabled:opacity-60"
                           >
-                            <ArrowUpIcon className="size-4" />
-                            <span className="hidden sm:inline">Promote</span>
+                            Promote
                           </button>
                         ) : null}
                         {canDemote ? (
                           <button
                             type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
+                            onClick={() => {
+                              setOpenMemberActionsId("");
                               handleRoleChange(member, "member");
                             }}
                             disabled={busyMemberId === member.user_id}
-                            aria-label={`Demote ${member.name} to member`}
-                            className="motion-lift inline-flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-border-strong)] bg-[var(--color-surface-level-2)] text-xs font-semibold text-[var(--color-text-card)] transition-[transform,background-color,border-color,box-shadow] duration-200 hover:border-[var(--color-focus)] hover:bg-[var(--color-surface-secondary)] disabled:opacity-60 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-3 sm:py-2"
+                            role="menuitem"
+                            className="member-action-menu-item w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] disabled:opacity-60"
                           >
-                            <ArrowDownIcon className="size-4" />
-                            <span className="hidden sm:inline">Demote</span>
+                            Demote
                           </button>
                         ) : null}
                         {canManage ? (
                           <button
                             type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
+                            onClick={() => {
+                              setOpenMemberActionsId("");
                               setMemberPendingKick(member);
                             }}
                             disabled={busyMemberId === member.user_id}
-                            aria-label={`Remove ${member.name} from group`}
-                            className="motion-lift inline-flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-error)] bg-[var(--color-error-soft)] text-xs font-semibold text-[var(--color-error)] transition-[transform,background-color,border-color,color,box-shadow] duration-200 hover:bg-[var(--color-error)] hover:text-white disabled:opacity-60 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-3 sm:py-2"
+                            role="menuitem"
+                            className="member-action-menu-item member-action-menu-item-danger w-full rounded-xl bg-[#b91c1c] px-3 py-2 text-left text-sm font-medium text-white transition focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] disabled:opacity-60"
                           >
-                            <TrashIcon className="size-4" />
-                            <span className="hidden sm:inline">Kick</span>
+                            Kick
                           </button>
                         ) : null}
-                      </div>
-                    ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               );

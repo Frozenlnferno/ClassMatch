@@ -67,6 +67,16 @@ export function ArrowRightIcon(props) {
   );
 }
 
+export function CalendarCheckIcon(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M8 2v4M16 2v4M3 10h18" />
+      <rect x="3" y="4" width="18" height="17" rx="3" />
+      <path d="m8 16 2.5 2.5L16.5 13" />
+    </IconBase>
+  );
+}
+
 export function GoogleIcon({ className = "size-5", ...props }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true" {...props}>

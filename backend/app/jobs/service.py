@@ -5,7 +5,11 @@ from uuid import uuid4
 
 from app.config import Config
 from app.jobs.queue import JOB_TYPE_CRN, JOB_TYPE_ICS, PostgresJobQueue
-from app.utils.supabase_admin import upload_private_file
+from app.utils.logger import get_logger
+from app.utils.supabase_admin import delete_file, upload_private_file
+
+
+logger = get_logger(__name__)
 
 
 def _build_job_response(job: dict) -> dict:
@@ -41,7 +45,17 @@ def create_ics_import_job(user_id: str, ics_bytes: bytes, filename: str, content
         "object_path": object_path,
         "original_filename": filename or "schedule.ics",
     }
-    job = queue.enqueue_job(job_id, metadata)
+    try:
+        job = queue.enqueue_job(job_id, metadata)
+    except Exception:
+        try:
+            delete_file(object_path, Config.SUPABASE_SCHEDULE_ICS_BUCKET)
+        except Exception as cleanup_error:
+            logger.exception(
+                "Failed to clean up schedule upload after enqueue failure",
+                extra={"job_id": job_id, "object_path": object_path, "error": str(cleanup_error)},
+            )
+        raise
     return _build_job_response(job)
 
 

@@ -10,13 +10,18 @@ from psycopg2 import pool
 from jwt.exceptions import InvalidTokenError
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from app import create_app
+from app import create_app, extensions
 from app.config import Config
+from app.jobs import service as jobs_service
 from app.jobs.schedule_imports import ScheduleImportWorker
-from app.jobs.queue import JOB_TYPE_CRN, PostgresJobQueue
+from app.jobs.queue import JOB_TYPE_CRN, JOB_TYPE_ICS, PostgresJobQueue
 from app.routes.groups import groups_service
 from app.routes.users import users_service
-from app.routes.schedules.schedules_service import extract_schedule_identifiers_from_ics
+from app.routes.schedules.schedules_service import (
+    TransientCourseApiError,
+    _fetch_uiuc_course,
+    extract_schedule_identifiers_from_ics,
+)
 from app.utils.supabase_admin import get_public_file_object_path
 from app.utils.auth import verify_supabase_jwt
 from app.utils import db as db_utils
@@ -255,6 +260,18 @@ class BackendRouteTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("at most", response.get_json()["error"])
 
+    def test_manual_course_add_rejects_invalid_course_identifier(self):
+        with patch("app.routes.schedules.schedules_controller.create_crn_import_job") as create_job:
+            response = self.client.post(
+                "/api/schedules/courses?term=fall&year=2026",
+                json={"courses": [{"subject": "ANTH2", "course": "2", "crn": "12123"}]},
+                headers=self._auth_header(),
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("2-5 letter subject", response.get_json()["error"])
+        create_job.assert_not_called()
+
     def test_schedule_upload_returns_async_job(self):
         with patch(
             "app.routes.schedules.schedules_controller.create_ics_import_job",
@@ -320,6 +337,220 @@ class BackendRouteTestCase(unittest.TestCase):
 
 
 class BackendServiceTestCase(unittest.TestCase):
+    @staticmethod
+    def _job_row(job_id, user_id, job_type, year, term):
+        return (
+            job_id, user_id, job_type, "queued", year, term, {}, None, None,
+            None, None, 0, 3, None, None, None, None, None, None, None, None, None,
+        )
+
+    def test_crn_enqueue_does_not_supersede_an_active_job(self):
+        cursor = Mock()
+        cursor.fetchone.side_effect = [
+            ("job-2",),
+            self._job_row("job-2", "user-1", JOB_TYPE_CRN, 2026, "fall"),
+        ]
+
+        @contextmanager
+        def fake_get_cursor():
+            yield cursor
+
+        with patch("app.jobs.queue.get_cursor", fake_get_cursor):
+            PostgresJobQueue().enqueue_job("job-2", {
+                "job_type": JOB_TYPE_CRN,
+                "user_id": "user-1",
+                "year": 2026,
+                "term": "fall",
+                "max_attempts": 3,
+                "payload_json": '{"courses":[]}',
+            })
+
+        executed_queries = [str(call.args[0]) for call in cursor.execute.call_args_list]
+        self.assertFalse(any("SET status = 'canceled'" in query for query in executed_queries))
+
+    def test_ics_enqueue_supersedes_an_active_job(self):
+        cursor = Mock()
+        cursor.fetchone.side_effect = [
+            ("job-2",),
+            self._job_row("job-2", "user-1", JOB_TYPE_ICS, None, None),
+        ]
+
+        @contextmanager
+        def fake_get_cursor():
+            yield cursor
+
+        with patch("app.jobs.queue.get_cursor", fake_get_cursor):
+            PostgresJobQueue().enqueue_job("job-2", {
+                "job_type": JOB_TYPE_ICS,
+                "user_id": "user-1",
+                "year": None,
+                "term": None,
+                "max_attempts": 3,
+                "payload_json": "{}",
+                "object_path": "schedule.ics",
+            })
+
+        executed_queries = [str(call.args[0]) for call in cursor.execute.call_args_list]
+        self.assertTrue(any("SET status = 'canceled'" in query for query in executed_queries))
+
+    def test_ics_enqueue_failure_removes_uploaded_object_and_preserves_error(self):
+        enqueue_error = RuntimeError("database unavailable")
+        queue = Mock()
+        queue.enqueue_job.side_effect = enqueue_error
+
+        with patch("app.jobs.service.PostgresJobQueue", return_value=queue), patch(
+            "app.jobs.service.upload_private_file"
+        ), patch("app.jobs.service.delete_file") as delete_file:
+            with self.assertRaisesRegex(RuntimeError, "database unavailable") as exc:
+                jobs_service.create_ics_import_job("user-1", SAMPLE_ICS, "schedule.ics", "text/calendar")
+
+        self.assertIs(exc.exception, enqueue_error)
+        delete_file.assert_called_once()
+
+    def test_ics_enqueue_cleanup_failure_does_not_replace_enqueue_error(self):
+        enqueue_error = RuntimeError("database unavailable")
+        queue = Mock()
+        queue.enqueue_job.side_effect = enqueue_error
+
+        with patch("app.jobs.service.PostgresJobQueue", return_value=queue), patch(
+            "app.jobs.service.upload_private_file"
+        ), patch("app.jobs.service.delete_file", side_effect=RuntimeError("storage unavailable")):
+            with self.assertRaisesRegex(RuntimeError, "database unavailable") as exc:
+                jobs_service.create_ics_import_job("user-1", SAMPLE_ICS, "schedule.ics", "text/calendar")
+
+        self.assertIs(exc.exception, enqueue_error)
+
+    def test_worker_clears_object_path_after_successful_immediate_cleanup(self):
+        queue = Mock()
+        worker = ScheduleImportWorker(queue=queue)
+        job = {"job_id": "job-1", "object_path": "schedule.ics"}
+
+        with patch("app.jobs.schedule_imports.delete_file") as delete_file:
+            worker._cleanup_job_object(job)
+
+        delete_file.assert_called_once_with("schedule.ics", Config.SUPABASE_SCHEDULE_ICS_BUCKET)
+        queue.clear_object_path.assert_called_once_with("job-1", "schedule.ics")
+
+    def test_worker_retains_object_path_when_immediate_cleanup_fails(self):
+        queue = Mock()
+        worker = ScheduleImportWorker(queue=queue)
+
+        with patch("app.jobs.schedule_imports.delete_file", side_effect=RuntimeError("storage unavailable")):
+            worker._cleanup_job_object({"job_id": "job-1", "object_path": "schedule.ics"})
+
+        queue.clear_object_path.assert_not_called()
+
+    def test_cleanup_failure_does_not_change_completed_job_status(self):
+        queue = Mock()
+        queue.build_lease.return_value = Mock()
+        queue.complete_with_schedule.return_value = "completed"
+        worker = ScheduleImportWorker(queue=queue)
+        job = {"job_id": "job-1", "job_type": JOB_TYPE_CRN, "object_path": "schedule.ics"}
+
+        with patch.object(worker, "_process_crn_job", return_value=({"saved_count": 1}, Mock())), patch(
+            "app.jobs.schedule_imports.delete_file", side_effect=RuntimeError("storage unavailable")
+        ):
+            worker.process_job(job)
+
+        queue.complete_with_schedule.assert_called_once()
+        queue.fail_or_retry_job.assert_not_called()
+
+    def test_invalid_job_fails_without_retry_or_error_traceback(self):
+        queue = Mock()
+        queue.build_lease.return_value = Mock()
+        queue.fail_or_retry_job.return_value = "failed"
+        worker = ScheduleImportWorker(queue=queue)
+        job = {"job_id": "job-1", "job_type": JOB_TYPE_CRN, "object_path": None}
+
+        with patch.object(worker, "_process_crn_job", side_effect=ValueError("Invalid class")), patch(
+            "app.jobs.schedule_imports.logger"
+        ) as logger:
+            worker.process_job(job)
+
+        queue.fail_or_retry_job.assert_called_once_with(queue.build_lease.return_value, "Invalid class", retryable=False)
+        logger.warning.assert_called_once()
+        logger.exception.assert_not_called()
+
+    def test_transient_course_api_failure_retries_without_error_traceback(self):
+        queue = Mock()
+        queue.build_lease.return_value = Mock()
+        queue.fail_or_retry_job.return_value = "retried"
+        worker = ScheduleImportWorker(queue=queue)
+        job = {"job_id": "job-1", "job_type": JOB_TYPE_CRN, "object_path": None}
+
+        with patch.object(
+            worker,
+            "_process_crn_job",
+            side_effect=TransientCourseApiError("UIUC unavailable"),
+        ), patch("app.jobs.schedule_imports.logger") as logger:
+            worker.process_job(job)
+
+        queue.fail_or_retry_job.assert_called_once_with(
+            queue.build_lease.return_value,
+            "UIUC unavailable",
+            retryable=True,
+        )
+        logger.warning.assert_called_once()
+        logger.exception.assert_not_called()
+
+    def test_stale_worker_does_not_delete_object_needed_by_retry(self):
+        queue = Mock()
+        queue.build_lease.return_value = Mock()
+        queue.complete_with_schedule.return_value = "stale_lease"
+        worker = ScheduleImportWorker(queue=queue)
+        job = {"job_id": "job-1", "job_type": JOB_TYPE_CRN, "object_path": "schedule.ics"}
+
+        with patch.object(worker, "_process_crn_job", return_value=({"saved_count": 1}, Mock())), patch(
+            "app.jobs.schedule_imports.delete_file"
+        ) as delete_file:
+            worker.process_job(job)
+
+        delete_file.assert_not_called()
+
+    def test_terminal_cleanup_deletes_row_only_after_object_cleanup(self):
+        queue = Mock()
+        queue.get_terminal_cleanup_candidates.return_value = [
+            {"job_id": "job-1", "object_path": "schedule.ics"}
+        ]
+        worker = ScheduleImportWorker(queue=queue)
+
+        with patch("app.jobs.schedule_imports.delete_file") as delete_file:
+            worker._cleanup_terminal_jobs()
+
+        delete_file.assert_called_once_with("schedule.ics", Config.SUPABASE_SCHEDULE_ICS_BUCKET)
+        queue.delete_terminal_job.assert_called_once_with("job-1")
+
+    def test_terminal_cleanup_retains_row_when_object_cleanup_fails(self):
+        queue = Mock()
+        queue.get_terminal_cleanup_candidates.return_value = [
+            {"job_id": "job-1", "object_path": "schedule.ics"}
+        ]
+        worker = ScheduleImportWorker(queue=queue)
+
+        with patch("app.jobs.schedule_imports.delete_file", side_effect=RuntimeError("storage unavailable")):
+            worker._cleanup_terminal_jobs()
+
+        queue.delete_terminal_job.assert_not_called()
+
+    def test_init_db_pool_uses_threaded_connection_pool(self):
+        threaded_pool = Mock()
+        with patch.object(extensions, "db_pool", None), patch.object(
+            extensions.pool, "ThreadedConnectionPool", return_value=threaded_pool
+        ) as constructor, patch.multiple(
+            Config,
+            DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres",
+            DB_SSLMODE="disable",
+        ):
+            result = extensions.init_db_pool()
+
+        self.assertIs(result, threaded_pool)
+        constructor.assert_called_once_with(
+            minconn=1,
+            maxconn=10,
+            dsn="postgresql://postgres:postgres@localhost:5432/postgres",
+            sslmode="disable",
+        )
+
     def test_get_cursor_commits_and_returns_healthy_connection(self):
         cursor = _DbFakeCursor()
         conn = _DbFakeConnection(cursor)
@@ -538,6 +769,16 @@ class BackendServiceTestCase(unittest.TestCase):
         self.assertEqual(schedule_info, {"year": 2026, "term": "spring"})
         self.assertIn({"Subject": "CS", "Subject Number": "411", "CRN": "31352"}, course_identifiers)
 
+    def test_uiuc_server_error_is_classified_as_transient(self):
+        response = Mock(status_code=500)
+        with patch("app.routes.schedules.schedules_service.requests.get", return_value=response):
+            with self.assertRaisesRegex(TransientCourseApiError, "status 500"):
+                _fetch_uiuc_course(
+                    2026,
+                    "fall",
+                    {"Subject": "ANTH", "Subject Number": "102", "CRN": "12123"},
+                )
+
 
 class BackendAuthValidationTestCase(unittest.TestCase):
     @classmethod
@@ -648,7 +889,7 @@ class PostgresQueueIntegrationTestCase(unittest.TestCase):
             connection.commit()
         finally:
             connection.close()
-        db_utils.extensions.db_pool = pool.SimpleConnectionPool(1, 4, dsn=cls.database_url)
+        db_utils.extensions.db_pool = pool.ThreadedConnectionPool(1, 4, dsn=cls.database_url)
 
     @classmethod
     def tearDownClass(cls):
@@ -665,17 +906,18 @@ class PostgresQueueIntegrationTestCase(unittest.TestCase):
         with db_utils.get_cursor() as cur:
             cur.execute("INSERT INTO public.users (id) VALUES (%s)", (user_id,))
 
-    def _enqueue(self, queue, user_id, year):
+    def _enqueue(self, queue, user_id, year, job_type=JOB_TYPE_CRN):
         from uuid import uuid4
 
         job_id = str(uuid4())
         return queue.enqueue_job(job_id, {
-            "job_type": JOB_TYPE_CRN,
+            "job_type": job_type,
             "user_id": user_id,
             "year": year,
-            "term": "fall",
+            "term": "fall" if year is not None else None,
             "max_attempts": 3,
             "payload_json": '{"courses":[]}',
+            "object_path": "schedule.ics" if job_type == JOB_TYPE_ICS else None,
         })
 
     def test_workers_claim_distinct_jobs_and_stale_completion_cannot_persist(self):
@@ -699,14 +941,14 @@ class PostgresQueueIntegrationTestCase(unittest.TestCase):
         self.assertEqual(status, "superseded")
         self.assertEqual(persisted, [])
 
-    def test_enqueue_supersedes_active_job_and_expired_lease_retries(self):
+    def test_ics_enqueue_supersedes_active_job_and_expired_lease_retries(self):
         from uuid import uuid4
 
         queue = PostgresJobQueue()
         user_id = str(uuid4())
         self._create_user(user_id)
-        first = self._enqueue(queue, user_id, 2026)
-        second = self._enqueue(queue, user_id, 2026)
+        first = self._enqueue(queue, user_id, None, JOB_TYPE_ICS)
+        second = self._enqueue(queue, user_id, None, JOB_TYPE_ICS)
         canceled = queue.get_job(first["job_id"])
         self.assertEqual(canceled["status"], "canceled")
         self.assertEqual(canceled["superseded_by"], second["job_id"])
@@ -721,6 +963,18 @@ class PostgresQueueIntegrationTestCase(unittest.TestCase):
         retried = queue.get_job(claimed["job_id"])
         self.assertEqual(retried["status"], "queued")
         self.assertEqual(retried["attempts"], 1)
+
+    def test_crn_enqueues_for_the_same_term_do_not_supersede_each_other(self):
+        from uuid import uuid4
+
+        queue = PostgresJobQueue()
+        user_id = str(uuid4())
+        self._create_user(user_id)
+        first = self._enqueue(queue, user_id, 2026)
+        second = self._enqueue(queue, user_id, 2026)
+
+        self.assertEqual(queue.get_job(first["job_id"])["status"], "queued")
+        self.assertEqual(queue.get_job(second["job_id"])["status"], "queued")
 
     def test_schedule_write_and_completion_roll_back_together(self):
         from uuid import uuid4
@@ -740,6 +994,27 @@ class PostgresQueueIntegrationTestCase(unittest.TestCase):
         self.assertEqual(current["status"], "processing")
         self.assertIsNone(current["result"])
 
+    def test_non_retryable_failure_is_failed_on_first_attempt(self):
+        from uuid import uuid4
+
+        queue = PostgresJobQueue()
+        user_id = str(uuid4())
+        self._create_user(user_id)
+        job = self._enqueue(queue, user_id, 2026)
+        claimed = queue.claim_next_job("worker-a")
+
+        status = queue.fail_or_retry_job(
+            queue.build_lease(claimed),
+            "Invalid class",
+            retryable=False,
+        )
+
+        self.assertEqual(status, "failed")
+        current = queue.get_job(job["job_id"])
+        self.assertEqual(current["status"], "failed")
+        self.assertEqual(current["attempts"], 1)
+        self.assertEqual(current["last_error"], "Invalid class")
+
     def test_terminal_jobs_are_removed_after_the_retention_period(self):
         from uuid import uuid4
 
@@ -756,7 +1031,8 @@ class PostgresQueueIntegrationTestCase(unittest.TestCase):
                 """,
                 (job["job_id"],),
             )
-        self.assertEqual([item["job_id"] for item in queue.cleanup_terminal_jobs()], [job["job_id"]])
+        self.assertEqual([item["job_id"] for item in queue.get_terminal_cleanup_candidates()], [job["job_id"]])
+        self.assertTrue(queue.delete_terminal_job(job["job_id"]))
         self.assertIsNone(queue.get_job(job["job_id"]))
 
 

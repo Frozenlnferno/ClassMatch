@@ -88,17 +88,18 @@ class PostgresJobQueue:
                  metadata.get("original_filename") or None, metadata["max_attempts"]),
             )
             cur.fetchone()
-            cur.execute(
-                """
-                UPDATE schedule_import_jobs
-                SET status = 'canceled', superseded_by = %s,
-                    cleanup_after = now() + (%s * interval '1 second'), updated_at = now()
-                WHERE id <> %s AND user_id = %s AND job_type = %s
-                  AND year IS NOT DISTINCT FROM %s AND term IS NOT DISTINCT FROM %s
-                  AND status IN ('queued', 'processing')
-                """,
-                (job_id, Config.JOB_RESULT_TTL_SECONDS, job_id, metadata["user_id"], metadata["job_type"], year, term),
-            )
+            if metadata["job_type"] == JOB_TYPE_ICS:
+                cur.execute(
+                    """
+                    UPDATE schedule_import_jobs
+                    SET status = 'canceled', superseded_by = %s,
+                        cleanup_after = now() + (%s * interval '1 second'), updated_at = now()
+                    WHERE id <> %s AND user_id = %s AND job_type = %s
+                      AND year IS NOT DISTINCT FROM %s AND term IS NOT DISTINCT FROM %s
+                      AND status IN ('queued', 'processing')
+                    """,
+                    (job_id, Config.JOB_RESULT_TTL_SECONDS, job_id, metadata["user_id"], metadata["job_type"], year, term),
+                )
             cur.execute(f"SELECT {_JOB_COLUMNS} FROM schedule_import_jobs WHERE id = %s", (job_id,))
             return self._decode_job(cur.fetchone())
 
@@ -192,7 +193,7 @@ class PostgresJobQueue:
             )
             return "completed"
 
-    def fail_or_retry_job(self, lease: Lease, error_message: str) -> str:
+    def fail_or_retry_job(self, lease: Lease, error_message: str, retryable: bool = True) -> str:
         with get_cursor() as cur:
             cur.execute(
                 """SELECT status, attempts, max_attempts, lease_token, worker_id
@@ -206,7 +207,7 @@ class PostgresJobQueue:
             if row[0] != STATUS_PROCESSING:
                 return "stale_lease"
             attempts, max_attempts = row[1], row[2]
-            if attempts < max_attempts:
+            if retryable and attempts < max_attempts:
                 cur.execute(
                     """
                     UPDATE schedule_import_jobs
@@ -226,17 +227,39 @@ class PostgresJobQueue:
             )
             return "failed"
 
-    def cleanup_terminal_jobs(self, max_jobs: int = 100) -> list[dict[str, Any]]:
+    def get_terminal_cleanup_candidates(self, max_jobs: int = 100) -> list[dict[str, Any]]:
         with get_cursor() as cur:
             cur.execute(
                 f"""
-                DELETE FROM schedule_import_jobs WHERE id IN (
-                    SELECT id FROM schedule_import_jobs WHERE cleanup_after <= now()
-                    ORDER BY cleanup_after FOR UPDATE SKIP LOCKED LIMIT %s
-                ) RETURNING {_JOB_COLUMNS}
+                SELECT {_JOB_COLUMNS} FROM schedule_import_jobs
+                WHERE status IN ('completed', 'failed', 'canceled') AND cleanup_after <= now()
+                ORDER BY cleanup_after LIMIT %s
                 """, (max_jobs,)
             )
             return [self._decode_job(row) for row in cur.fetchall()]
+
+    def delete_terminal_job(self, job_id: str) -> bool:
+        with get_cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM schedule_import_jobs
+                WHERE id = %s AND status IN ('completed', 'failed', 'canceled')
+                  AND cleanup_after <= now()
+                """,
+                (job_id,),
+            )
+            return cur.rowcount == 1
+
+    def clear_object_path(self, job_id: str, object_path: str) -> bool:
+        with get_cursor() as cur:
+            cur.execute(
+                """
+                UPDATE schedule_import_jobs SET object_path = NULL, updated_at = now()
+                WHERE id = %s AND object_path = %s
+                """,
+                (job_id, object_path),
+            )
+            return cur.rowcount == 1
 
     def get_job(self, job_id: str) -> dict[str, Any] | None:
         try:

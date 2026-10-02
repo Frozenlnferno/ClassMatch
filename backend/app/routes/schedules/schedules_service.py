@@ -16,6 +16,10 @@ COURSE_SUMMARY_RE = re.compile(r"\b([A-Z]{2,5})\s+([0-9]{3}[A-Z]?)\s+([A-Z0-9]+)
 CRN_RE = re.compile(r"\bCRN:\s*([0-9]{5})\b", re.IGNORECASE)
 
 
+class TransientCourseApiError(RuntimeError):
+    """A temporary UIUC API failure that should allow the job to retry."""
+
+
 def _normalize_text(value):
     return " ".join(value.split()) if value else ""
 
@@ -385,7 +389,7 @@ def _fetch_uiuc_course(year, term, identifier):
     try:
         response = requests.get(url, timeout=Config.UIUC_API_TIMEOUT_SECONDS)
     except requests.RequestException as exc:
-        raise ValueError(
+        raise TransientCourseApiError(
             f"Failed to reach the UIUC course API for {subject} {course_number} CRN {crn}: {exc}"
         ) from exc
 
@@ -394,15 +398,20 @@ def _fetch_uiuc_course(year, term, identifier):
             f"UIUC course not found for {subject} {course_number} CRN {crn} in {term} {year}."
         )
 
+    if response.status_code == 429 or response.status_code >= 500:
+        raise TransientCourseApiError(
+            f"UIUC course API request failed for {subject} {course_number} CRN {crn} with status {response.status_code}."
+        )
+
     if response.status_code != 200:
         raise ValueError(
-            f"UIUC course API request failed for {subject} {course_number} CRN {crn} with status {response.status_code}."
+            f"UIUC course not found for {subject} {course_number} CRN {crn} in {term} {year}."
         )
 
     try:
         root = ET.fromstring(response.content)
     except ET.ParseError as exc:
-        raise ValueError(
+        raise TransientCourseApiError(
             f"UIUC course API returned malformed XML for {subject} {course_number} CRN {crn}."
         ) from exc
 

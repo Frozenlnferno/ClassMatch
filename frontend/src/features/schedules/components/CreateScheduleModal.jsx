@@ -117,8 +117,12 @@ export default function CreateScheduleModal({
       return;
     }
 
-    if (normalizedCourses.some((course) => !course.subject || !course.course || course.crn.length !== 5)) {
-      setError("Each class needs a subject, course number, and 5-digit CRN.");
+    if (normalizedCourses.some((course) => (
+      !/^[A-Z]{2,5}$/.test(course.subject)
+      || !/^\d{3}$/.test(course.course)
+      || !/^\d{5}$/.test(course.crn)
+    ))) {
+      setError("Each class needs a 2-5 letter subject, 3-digit course number, and 5-digit CRN.");
       return;
     }
 

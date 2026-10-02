@@ -41,7 +41,7 @@ class ScheduleImportWorker:
         while True:
             try:
                 self.queue.reclaim_expired_jobs()
-                self.queue.cleanup_terminal_jobs()
+                self._cleanup_terminal_jobs()
                 cleanup_expired_join_rate_limits()
                 job = self.queue.claim_next_job(self.worker_id)
                 if not job:
@@ -57,6 +57,7 @@ class ScheduleImportWorker:
         stop_event = threading.Event()
         heartbeat_thread = threading.Thread(target=self._heartbeat_loop, args=(lease, stop_event), daemon=True)
         heartbeat_thread.start()
+        status = None
         try:
             if job["job_type"] == JOB_TYPE_ICS:
                 result_payload, persist_schedule = self._process_ics_job(job)
@@ -66,16 +67,50 @@ class ScheduleImportWorker:
                 raise ValueError(f"Unsupported job type: {job['job_type']}")
 
             status = self.queue.complete_with_schedule(lease, result_payload, persist_schedule)
-            if status in {"completed", "superseded", "stale_lease"} and job.get("object_path"):
-                delete_file(job["object_path"], Config.SUPABASE_SCHEDULE_ICS_BUCKET)
+        except ValueError as exc:
+            status = self.queue.fail_or_retry_job(lease, str(exc), retryable=False)
+            logger.warning(
+                "Schedule import job rejected",
+                extra={"job_id": job["job_id"], "job_status": status, "error": str(exc)},
+            )
         except Exception as exc:
-            logger.exception("Failed to process schedule import job", extra={"job_id": job["job_id"], "error": str(exc)})
-            status = self.queue.fail_or_retry_job(lease, str(exc))
-            if status in {"failed", "superseded"} and job.get("object_path"):
-                delete_file(job["object_path"], Config.SUPABASE_SCHEDULE_ICS_BUCKET)
+            status = self.queue.fail_or_retry_job(lease, str(exc), retryable=True)
+            log_extra = {"job_id": job["job_id"], "job_status": status, "error": str(exc)}
+            if status == "retried":
+                logger.warning("Schedule import job failed and will retry", extra=log_extra)
+            else:
+                logger.exception("Failed to process schedule import job", extra=log_extra)
         finally:
             stop_event.set()
             heartbeat_thread.join(timeout=1)
+
+        if status in {"completed", "failed", "superseded"}:
+            self._cleanup_job_object(job)
+
+    def _cleanup_job_object(self, job: dict):
+        object_path = job.get("object_path")
+        if not object_path:
+            return
+        try:
+            delete_file(object_path, Config.SUPABASE_SCHEDULE_ICS_BUCKET)
+            self.queue.clear_object_path(job["job_id"], object_path)
+        except Exception as exc:
+            logger.exception(
+                "Failed to clean up schedule import object",
+                extra={"job_id": job["job_id"], "object_path": object_path, "error": str(exc)},
+            )
+
+    def _cleanup_terminal_jobs(self):
+        for job in self.queue.get_terminal_cleanup_candidates():
+            try:
+                if job.get("object_path"):
+                    delete_file(job["object_path"], Config.SUPABASE_SCHEDULE_ICS_BUCKET)
+                self.queue.delete_terminal_job(job["job_id"])
+            except Exception as exc:
+                logger.exception(
+                    "Failed to clean up terminal schedule import job",
+                    extra={"job_id": job["job_id"], "error": str(exc)},
+                )
 
     def _heartbeat_loop(self, lease, stop_event: threading.Event):
         while not stop_event.wait(Config.JOB_HEARTBEAT_SECONDS):

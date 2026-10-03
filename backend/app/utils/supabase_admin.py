@@ -107,20 +107,55 @@ def delete_file(object_path: str, bucket_name: str) -> None:
 
 
 def get_public_file_object_path(public_url: str, bucket_name: str = DEFAULT_STORAGE_BUCKET) -> str | None:
-    if not public_url or not bucket_name:
+    if (
+        not isinstance(public_url, str)
+        or not public_url
+        or not bucket_name
+        or any(ord(char) <= 32 or ord(char) == 127 for char in public_url)
+    ):
         return None
 
-    parsed = urlparse(public_url)
-    path = unquote(parsed.path or "")
-    marker = f"/storage/v1/object/public/{bucket_name}/"
-    if marker not in path:
+    try:
+        parsed = urlparse(public_url)
+        base = urlparse(Config.SUPABASE_PUBLIC_URL.rstrip("/"))
+        if (
+            base.scheme not in ("http", "https")
+            or not base.netloc
+            or parsed.scheme != base.scheme
+            or parsed.netloc != base.netloc
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.query
+            or parsed.fragment
+        ):
+            return None
+    except (TypeError, ValueError):
         return None
 
-    object_path = path.split(marker, 1)[1].strip("/")
-    return object_path or None
+    marker = f"{base.path}/storage/v1/object/public/{quote(bucket_name, safe='')}/"
+    if not parsed.path.startswith(marker):
+        return None
+
+    encoded_path = parsed.path[len(marker):]
+    object_path = unquote(encoded_path)
+    if (
+        not object_path
+        or any(part in ("", ".", "..") for part in object_path.split("/"))
+        or any(char in object_path for char in ("\\", "%"))
+        or any(ord(char) < 32 or ord(char) == 127 for char in object_path)
+        or quote(object_path, safe="/") != encoded_path
+    ):
+        return None
+    return object_path
 
 
-def delete_public_file_from_url(public_url: str, bucket_name: str = DEFAULT_STORAGE_BUCKET) -> None:
+def delete_public_file_from_url(
+    public_url: str,
+    bucket_name: str = DEFAULT_STORAGE_BUCKET,
+    *,
+    expected_prefix: str,
+) -> None:
+    """Delete only canonical URLs inside the caller's server-controlled folder."""
     object_path = get_public_file_object_path(public_url, bucket_name)
-    if object_path:
+    if expected_prefix and expected_prefix.endswith("/") and object_path and object_path.startswith(expected_prefix):
         delete_file(object_path, bucket_name)

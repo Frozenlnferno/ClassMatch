@@ -2,7 +2,7 @@ import io
 import os
 import unittest
 from datetime import datetime, timezone
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from unittest.mock import Mock, patch
 
 import jwt
@@ -23,7 +23,7 @@ from app.routes.schedules.schedules_service import (
     _fetch_uiuc_course,
     extract_schedule_identifiers_from_ics,
 )
-from app.utils.supabase_admin import get_public_file_object_path
+from app.utils.supabase_admin import delete_public_file_from_url, get_public_file_object_path
 from app.utils.auth import verify_supabase_jwt
 from app.utils import db as db_utils
 
@@ -335,7 +335,87 @@ class BackendRouteTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         update_self_info.assert_called_once_with("user-1", users_service.UNSET, users_service.UNSET, None)
-        delete_public_file_from_url.assert_called_once()
+        delete_public_file_from_url.assert_called_once_with(
+            "http://127.0.0.1:54321/storage/v1/object/public/images/avatars/user-1/old.png",
+            expected_prefix="avatars/user-1/",
+        )
+
+    def test_image_urls_cannot_be_set_through_json_routes(self):
+        cases = [
+            ("PATCH", "/api/users/me", "avatar_url", "app.routes.users.users_controller.update_self_info"),
+            ("PATCH", "/api/groups/12", "group_icon_url", "app.routes.groups.groups_controller.change_group_info"),
+            ("POST", "/api/groups/create", "group_icon_url", "app.routes.groups.groups_controller.create_group"),
+        ]
+        for method, route, field, mutation in cases:
+            for value in (
+                "http://127.0.0.1:54321/storage/v1/object/public/images/avatars/victim/photo.png",
+                "http://127.0.0.1:54321/storage/v1/object/public/images/groups/99/photo.png",
+                "http://127.0.0.1:54321/storage/v1/object/public/images/avatars/user-1/photo.png",
+                "", False, 123, [], {},
+            ):
+                with self.subTest(route=route, value=value), patch(mutation) as update, patch(
+                    "app.utils.supabase_admin.get_supabase_admin_client"
+                ) as storage:
+                    response = self.client.open(
+                        route, method=method, json={field: value}, headers=self._auth_header(),
+                    )
+                    self.assertEqual(response.status_code, 400)
+                    update.assert_not_called()
+                    storage.assert_not_called()
+
+    def test_image_changes_delete_only_the_current_owner_folder(self):
+        base = "http://127.0.0.1:54321/storage/v1/object/public/images/"
+        for is_group in (False, True):
+            module = "app.routes.groups.groups_controller" if is_group else "app.routes.users.users_controller"
+            route = "/api/groups/12" if is_group else "/api/users/me"
+            field = "group_icon_url" if is_group else "avatar_url"
+            info_function = "get_group_details" if is_group else "get_self_info"
+            update_function = "change_group_info" if is_group else "update_self_info"
+            own_path = "groups/12/old.png" if is_group else "avatars/user-1/old.png"
+            for upload in (False, True):
+                for old_path in (own_path, "avatars/victim/photo.png", "groups/99/photo.png"):
+                    with self.subTest(group=is_group, upload=upload, old_path=old_path), ExitStack() as stack:
+                        stack.enter_context(patch(
+                            f"{module}.{info_function}",
+                            return_value={field: base + old_path, "id": 12, "my_role": "owner"},
+                        ))
+                        update = stack.enter_context(patch(f"{module}.{update_function}"))
+                        storage = stack.enter_context(patch("app.utils.supabase_admin.get_supabase_admin_client"))
+                        uploader = stack.enter_context(patch(f"{module}.upload_public_file", return_value=base + own_path.replace("old", "new")))
+                        if upload:
+                            response = self.client.post(
+                                route + ("/icon" if is_group else "/avatar"),
+                                data={"image": (io.BytesIO(b"image"), "photo.png")},
+                                headers=self._auth_header(),
+                            )
+                            self.assertEqual(uploader.call_count, 1)
+                            prefix = "groups/12/" if is_group else "avatars/user-1/"
+                            self.assertTrue(uploader.call_args.args[0].startswith(prefix))
+                        else:
+                            response = self.client.patch(route, json={field: None}, headers=self._auth_header())
+                            uploader.assert_not_called()
+                        self.assertEqual(response.status_code, 200)
+                        update.assert_called_once()
+                        if old_path == own_path:
+                            storage.return_value.storage.from_.return_value.remove.assert_called_once_with([own_path])
+                        else:
+                            storage.assert_not_called()
+
+    def test_group_member_cannot_upload_an_icon(self):
+        with patch(
+            "app.routes.groups.groups_controller.get_group_details",
+            return_value={"id": 12, "my_role": "member", "group_icon_url": None},
+        ), patch("app.routes.groups.groups_controller.upload_public_file") as upload, patch(
+            "app.routes.groups.groups_controller.change_group_info"
+        ) as update:
+            response = self.client.post(
+                "/api/groups/12/icon",
+                data={"image": (io.BytesIO(b"image"), "photo.png")},
+                headers=self._auth_header(),
+            )
+        self.assertEqual(response.status_code, 403)
+        upload.assert_not_called()
+        update.assert_not_called()
 
 
 class BackendServiceTestCase(unittest.TestCase):
@@ -613,11 +693,39 @@ class BackendServiceTestCase(unittest.TestCase):
         self.assertEqual(pool.putconn_calls, [(conn, True)])
 
     def test_public_file_object_path_is_extracted_from_supabase_url(self):
-        object_path = get_public_file_object_path(
-            "http://127.0.0.1:54321/storage/v1/object/public/images/avatars/user-1/photo.png"
-        )
+        with patch.object(Config, "SUPABASE_PUBLIC_URL", "http://127.0.0.1:54321"):
+            object_path = get_public_file_object_path(
+                "http://127.0.0.1:54321/storage/v1/object/public/images/avatars/user-1/photo.png"
+            )
 
         self.assertEqual(object_path, "avatars/user-1/photo.png")
+
+    def test_image_deletion_rejects_untrusted_and_noncanonical_urls(self):
+        base = "http://127.0.0.1:54321/storage/v1/object/public/images/"
+        urls = [
+            "https://evil.example/storage/v1/object/public/images/avatars/user-1/photo.png",
+            "http://127.0.0.1:54321/extra/storage/v1/object/public/images/avatars/user-1/photo.png",
+            "http://attacker@127.0.0.1:54321/storage/v1/object/public/images/avatars/user-1/photo.png",
+            base.replace("/images/", "/other/") + "avatars/user-1/photo.png",
+            base + "avatars/user-10/photo.png",
+            base + "groups/user-1/photo.png",
+            base + "avatars/user-1/../victim/photo.png",
+            base + "avatars/user-1/%2e%2e/victim/photo.png",
+            base + "avatars/user-1/%252e%252e/victim/photo.png",
+            base + "avatars/user-1%2Fphoto.png",
+            base + "avatars/user-1/\\victim/photo.png",
+            base + "avatars/user-1//photo.png",
+            base + "avatars/user-1/photo.png?x=1",
+            base + "avatars/user-1/photo.png#fragment",
+            base + "avatars/user-1/pho\nto.png",
+            "http://[invalid",
+            None, 123, {},
+        ]
+        with patch.object(Config, "SUPABASE_PUBLIC_URL", "http://127.0.0.1:54321"):
+            for url in urls:
+                with self.subTest(url=url), patch("app.utils.supabase_admin.get_supabase_admin_client") as storage:
+                    delete_public_file_from_url(url, expected_prefix="avatars/user-1/")
+                    storage.assert_not_called()
 
     def test_update_self_info_can_clear_avatar_url(self):
         fake_cursor = _FakeCursor()

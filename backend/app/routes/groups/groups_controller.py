@@ -82,11 +82,11 @@ def _read_validated_image(*field_names):
     return file_bytes, content_type, extension
 
 
-def _delete_previous_image(public_url, context):
+def _delete_previous_image(public_url, context, group_id):
     if not public_url:
         return
     try:
-        delete_public_file_from_url(public_url)
+        delete_public_file_from_url(public_url, expected_prefix=f"groups/{group_id}/")
     except Exception as exc:
         logger.warning("Failed to delete previous image", extra={"context": context, "error": str(exc)})
 
@@ -113,6 +113,8 @@ def create_group_route():
         data = request.get_json(silent=True) or {}
         joinable = data["joinable"] if "joinable" in data else None
         group_icon_url = data["group_icon_url"] if "group_icon_url" in data else None
+        if group_icon_url is not None:
+            return jsonify({"error": "Use the icon upload endpoint to set a group image"}), 400
         if joinable is None:
             joinable = True
         create_group(
@@ -226,14 +228,17 @@ def update_group_info(group_id):
     description = data["description"] if "description" in data else None
     joinable = data["joinable"] if "joinable" in data else None
     group_icon_url = data["group_icon_url"] if "group_icon_url" in data else UNSET
+    if group_icon_url is not UNSET and group_icon_url is not None:
+        return jsonify({"error": "Use the icon upload endpoint to set a group image"}), 400
 
     try:
         previous_icon_url = None
         if group_icon_url is not UNSET:
-            previous_icon_url = get_group_details(admin_id, group_id).get("group_icon_url")
+            group = get_group_details(admin_id, group_id)
+            previous_icon_url = group.get("group_icon_url")
         change_group_info(admin_id, group_id, name, description, joinable, group_icon_url)
         if group_icon_url is not UNSET and previous_icon_url and previous_icon_url != group_icon_url:
-            _delete_previous_image(previous_icon_url, "group_icon_update")
+            _delete_previous_image(previous_icon_url, "group_icon_update", group["id"])
     except PermissionError as e:
         logger.warning("Permission denied updating group info", extra={"error": str(e)})
         return jsonify({"error": str(e)}), 403
@@ -327,12 +332,15 @@ def upload_group_icon_route(group_id):
 
     try:
         file_bytes, content_type, extension = _read_validated_image("image", "icon")
-        previous_icon_url = get_group_details(admin_id, group_id).get("group_icon_url")
-        object_path = f"groups/{group_id}/{uuid4().hex}.{extension}"
+        group = get_group_details(admin_id, group_id)
+        if group.get("my_role") not in ("admin", "owner"):
+            raise PermissionError("User does not have permission to change group settings")
+        previous_icon_url = group.get("group_icon_url")
+        object_path = f"groups/{group['id']}/{uuid4().hex}.{extension}"
         public_url = upload_public_file(object_path, file_bytes, content_type)
         change_group_info(admin_id, group_id, None, None, None, public_url)
         if previous_icon_url and previous_icon_url != public_url:
-            _delete_previous_image(previous_icon_url, "group_icon_upload")
+            _delete_previous_image(previous_icon_url, "group_icon_upload", group["id"])
     except PermissionError as e:
         logger.warning("Permission denied uploading group icon", extra={"error": str(e)})
         return jsonify({"error": str(e)}), 403

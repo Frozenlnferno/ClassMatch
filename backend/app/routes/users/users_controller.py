@@ -74,11 +74,11 @@ def _read_validated_image(*field_names):
     return file_bytes, content_type, extension
 
 
-def _delete_previous_image(public_url, context):
+def _delete_previous_image(public_url, context, user_id):
     if not public_url:
         return
     try:
-        delete_public_file_from_url(public_url)
+        delete_public_file_from_url(public_url, expected_prefix=f"avatars/{user_id}/")
     except Exception as exc:
         logger.warning("Failed to delete previous image", extra={"context": context, "error": str(exc)})
 
@@ -103,12 +103,14 @@ def update_current_user_info():
         name = data["name"] if "name" in data else UNSET
         bio = data["bio"] if "bio" in data else UNSET
         avatar_url = data["avatar_url"] if "avatar_url" in data else UNSET
+        if avatar_url is not UNSET and avatar_url is not None:
+            return jsonify({"error": "Use the avatar upload endpoint to set a profile image"}), 400
         previous_avatar_url = None
         if avatar_url is not UNSET:
             previous_avatar_url = get_self_info(user_id).get("avatar_url")
         update_self_info(user_id, name, bio, avatar_url)
         if avatar_url is not UNSET and previous_avatar_url and previous_avatar_url != avatar_url:
-            _delete_previous_image(previous_avatar_url, "profile_avatar_update")
+            _delete_previous_image(previous_avatar_url, "profile_avatar_update", user_id)
     except Exception as e:
         logger.exception("Error updating self info", extra={"error": str(e)})
         return jsonify({"error": "Failed to update self info"}), 500
@@ -127,7 +129,7 @@ def upload_current_user_avatar():
         avatar_url = upload_public_file(object_path, file_bytes, content_type)
         update_self_info(user_id, avatar_url=avatar_url)
         if previous_avatar_url and previous_avatar_url != avatar_url:
-            _delete_previous_image(previous_avatar_url, "profile_avatar_upload")
+            _delete_previous_image(previous_avatar_url, "profile_avatar_upload", user_id)
     except ValueError as e:
         logger.warning("Invalid avatar upload", extra={"error": str(e)})
         return jsonify({"error": str(e)}), 400
@@ -161,4 +163,3 @@ def get_public_user_info(user_id):
         logger.exception("Error getting user info", extra={"error": str(e)})
         return jsonify({"error": "Failed to retrieve user info"}), 500
     return jsonify(user_info)
-
